@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './globals.css';
 import LayoutWrap from './component/LayoutWrap';
 import Home from './pages/home';
+import LoginForm from './pages/login';
 
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
           <Routes>
             <Route index element={<Home />} />
             <Route path="/" element={<Home />} />
+            <Route path="/login" element={<LoginForm />} />
           </Routes>
         </LayoutWrap>
       </BrowserRouter>
