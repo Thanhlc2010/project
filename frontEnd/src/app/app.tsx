@@ -8,7 +8,6 @@ import LayoutWrap from './component/LayoutWrap';
 import Home from './pages/home';
 import LoginForm from './pages/login';
 
-
 function App() {
     return (
       <BrowserRouter>

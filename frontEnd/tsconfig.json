@@ -15,7 +15,7 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "react-jsx",
+    "jsx": "preserve",
     "incremental": true,
     "plugins": [
       {
@@ -32,8 +32,9 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts"
-, "src/app/component/TaskCompleteRow.js"  ],
+    ".next/types/**/*.ts",
+    "src/app/component/TaskCompleteRow.js"
+  ],
   "exclude": [
     "node_modules"
   ]

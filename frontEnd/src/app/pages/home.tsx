@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import TaskCompleteRow from '../component/TaskCompleteRow';  // Import the TaskRow component
 import TaskProcessRow from '../component/TaskProcessRow';  // Import the TaskRow component
 import TaskToDoRow from '../component/TaskToDoRow';  // Import the TaskRow component
+import AddTaskButton from '../component/AddTaskButton';  // Import the AddTaskButton component
 
 const TaskManagementUI = () => {
   const [tasks, setTasks] = useState([
-    { id: 1, name: 'Task 1', subtasks: 1, status: 'COMPLETE', completed: true },
+    { id: 1, name: 'Task 1', subtasks: 1, status: 'TO DO', completed: true },
     { id: 2, name: 'Task 2', subtasks: 3, status: 'COMPLETE', completed: false },
     { id: 3, name: 'Task 3', subtasks: 4, status: 'IN PROGRESS', completed: true },
     { id: 4, name: 'Task 4', subtasks: 2, status: 'COMPLETE', completed: true }
@@ -93,7 +94,7 @@ const TaskManagementUI = () => {
       </div>
 
 
-      {/* Status Group */}
+      {/* Status Group - Complete*/}
       <div className="mt-2">
         <div className="flex items-center px-4 py-2 border-b border-gray-200">
           <div className="flex items-center justify-center w-5 h-5 rounded-full bg-green-500 mr-2">
@@ -103,7 +104,12 @@ const TaskManagementUI = () => {
           </div>
           <div className="text-xs font-bold uppercase">Complete</div>
           <div className="ml-2 text-xs text-gray-500">1</div>
-          <div className="ml-4 text-sm text-gray-500 cursor-pointer">+ Add Task</div>
+          <div className="ml-4 text-sm text-gray-500 cursor-pointer">
+            <AddTaskButton 
+              setTasks={setTasks}
+              tasks={tasks}
+            />
+          </div>
           <div className="ml-auto cursor-pointer">
             <svg className="w-4 h-4 text-gray-500" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="1.5" />
@@ -114,7 +120,7 @@ const TaskManagementUI = () => {
         {/* Table */}
         <table className="w-full border-collapse">
           <thead>
-            <tr className="text-left text-sm text-gray-500">
+            <tr className="text-left text-sm text-gray-500">ff
               <th className="w-10 px-4 py-3"></th>
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Assignee</th>
@@ -136,7 +142,10 @@ const TaskManagementUI = () => {
                   <svg className="w-4 h-4 mr-2" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="1.5" />
                   </svg>
-                  Add Task
+                  <AddTaskButton 
+                    setTasks={setTasks}
+                    tasks={tasks}
+                  />
                 </div>
               </td>
             </tr>
