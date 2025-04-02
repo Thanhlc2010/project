@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 // import '../globals.css';
 // import '../app/';
 import LayoutWrap from './LayoutWrap';
-import Home from '../app/pages/home';
+import Home from '../pages/home';
 function App() {
     return (
       <BrowserRouter>

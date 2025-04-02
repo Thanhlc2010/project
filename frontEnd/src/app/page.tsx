@@ -1,9 +1,9 @@
 "use client";
 import React, { useState } from 'react';
-import TaskCompleteRow from '../component/TaskCompleteRow';  // Import the TaskRow component
-import TaskProcessRow from '../component/TaskProcessRow';  // Import the TaskRow component
-import TaskToDoRow from '../component/TaskToDoRow';  // Import the TaskRow component
-import AddTaskButton from '../component/AddTaskButton';  // Import the AddTaskButton component
+import TaskCompleteRow from './component/TaskCompleteRow';  // Import the TaskRow component
+import TaskProcessRow from './component/TaskProcessRow';  // Import the TaskRow component
+import TaskToDoRow from './component/TaskToDoRow';  // Import the TaskRow component
+import AddTaskButton from './component/AddTaskButton';  // Import the AddTaskButton component
 
 const TaskManagementUI = () => {
   const [tasks, setTasks] = useState([
