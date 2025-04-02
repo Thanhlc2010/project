@@ -15,7 +15,7 @@
     "@mui/styled-engine-sc": "^6.3.0",
     "antd": "^5.22.7",
     "next": "^15.2.4",
-    "react": "^19.1.0",
+    "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.1",
     "styled-components": "^6.1.13"
