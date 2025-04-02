@@ -3,11 +3,10 @@
 import React from 'react';
 // import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import './globals.css';
-import LayoutWrap from './component/LayoutWrap';
-import Home from './pages/home';
-import LoginForm from './pages/login';
-
+// import '../globals.css';
+// import '../app/';
+import LayoutWrap from './LayoutWrap';
+import Home from '../app/pages/home';
 function App() {
     return (
       <BrowserRouter>
@@ -15,7 +14,6 @@ function App() {
           <Routes>
             <Route index element={<Home />} />
             <Route path="/" element={<Home />} />
-            <Route path="/login" element={<LoginForm />} />
           </Routes>
         </LayoutWrap>
       </BrowserRouter>
