@@ -120,7 +120,7 @@ const TaskManagementUI = () => {
         {/* Table */}
         <table className="w-full border-collapse">
           <thead>
-            <tr className="text-left text-sm text-gray-500">ff
+            <tr className="text-left text-sm text-gray-500">
               <th className="w-10 px-4 py-3"></th>
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Assignee</th>

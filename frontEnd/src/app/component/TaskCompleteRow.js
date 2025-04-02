@@ -4,12 +4,10 @@ const TaskCompleteRow = ({ task }) => {
   return (
     <tr key={task.id} className="border-b border-gray-200 hover:bg-gray-50">
       <td className="px-4 py-3">
-        <div className={`flex items-center justify-center w-5 h-5 rounded ${task.completed ? 'bg-green-500' : 'border border-gray-300'}`}>
-          {task.completed && (
+        <div className={`flex items-center justify-center w-5 h-5 rounded bg-green-500`}>
             <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-          )}
         </div>
       </td>
       <td className="px-4 py-3">
