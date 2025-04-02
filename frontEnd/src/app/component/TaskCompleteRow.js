@@ -1,4 +1,5 @@
 import React from 'react';
+import IconButton from "../component/descriptionButton";
 
 const TaskCompleteRow = ({ task }) => {
   return (
@@ -13,6 +14,7 @@ const TaskCompleteRow = ({ task }) => {
       <td className="px-4 py-3">
         <div className="flex items-center">
           <div className="font-medium">{task.name}</div>
+          <div className='pl-2'><IconButton /></div>
           {task.subtasks > 0 && (
             <div className="ml-2 px-1.5 py-0.5 bg-gray-100 rounded-full text-xs text-gray-500">
               {task.subtasks}

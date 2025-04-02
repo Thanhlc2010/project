@@ -34,7 +34,7 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "src/app/component/TaskCompleteRow.js"
-  ],
+, "src/app/component/descriptionButton.jsx"  ],
   "exclude": [
     "node_modules"
   ]
