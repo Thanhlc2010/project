@@ -1,7 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 
 const LoginForm: React.FC = () => {
   const [username, setUsername] = useState("");
@@ -12,15 +11,16 @@ const LoginForm: React.FC = () => {
     const users = JSON.parse(localStorage.getItem("users")!) || [];
     const userExists = users.some(
       (user: { username: string; password: string }) =>
-        user.username === username && user.password === password
+        user.username === username
     );
     if (userExists) {
-      route.push("/home");
-      localStorage.setItem("authenticated", "true");
-    } else {
-      alert("Invalid username or password");
+      alert("User already exists!");
       return;
     }
+    users.push({ username, password });
+    localStorage.setItem("users", JSON.stringify(users));
+    alert("User registered successfully!");
+    route.push("/login");
   };
   useEffect(() => {
     const authenticated = localStorage.getItem("authenticated");
@@ -44,7 +44,7 @@ const LoginForm: React.FC = () => {
         style={{ boxShadow: "0 0 40px rgba(129, 236, 174, 0.6)" }}
       >
         <h3 className="text-4xl font-semibold text-white text-center mb-6">
-          Login Here
+          Register Here
         </h3>
 
         <label
@@ -89,18 +89,8 @@ const LoginForm: React.FC = () => {
                     rounded-md border-2 border-gray-700 border-opacity-30 cursor-pointer 
                     hover:bg-green-700 focus:bg-green-700 transition-all duration-500"
         >
-          Log In
+          Register
         </button>
-
-        <p className="text-lg text-white text-center mb-4">
-          Do not have an account?{" "}
-          <Link
-            href="/register"
-            className="text-green-500 hover:text-green-700 transition-all duration-500"
-          >
-            Register
-          </Link>
-        </p>
 
         <div className="flex justify-center items-center space-x-3">
           <button

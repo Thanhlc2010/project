@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import TaskList from "../component/PERTComponents/TaskList";
 import PertDiagram from "../component/PERTComponents/PertDiagram";
 import {
@@ -10,6 +10,7 @@ import {
   DragStartEvent,
 } from "@dnd-kit/core";
 import TaskCard from "../component/PERTComponents/TaskCard";
+import { useRouter } from "next/navigation";
 
 interface Task {
   id: string;
@@ -34,20 +35,26 @@ export default function Home() {
   const [pertTasks, setPertTasks] = useState<Task[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [edges, setEdges] = useState<Edge[]>([]);
-  const pertAreaRef = useRef<HTMLDivElement>(null); // ref for drop zone
-
-  // Load tasks from mock JSON
+  const route = useRouter();
+  // Use dynamic import to load the tasks JSON
   useEffect(() => {
     const loadTasks = async () => {
       const module = await import("../../mocks/PERTData.json");
       const loadedTasks = module.default.map((task: any) => ({
         ...task,
-        priority: task.priority as "high" | "medium" | "low",
+        priority: task.priority as "high" | "medium" | "low", // Cast priority to the valid type
       }));
       setTasks(loadedTasks);
     };
     loadTasks();
   }, []);
+
+  useEffect(() => {
+    const authenticated = localStorage.getItem("authenticated");
+    if (!authenticated || authenticated === "false") {
+      route.push("/login");
+    }
+  }, [route]);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
@@ -56,41 +63,24 @@ export default function Home() {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
-
+    // debugger;
     if (over && over.id === "pert-drop-area") {
       const draggedTask = tasks.find((task) => task.id === active.id);
-
       if (
         draggedTask &&
         !pertTasks.some((pertTask) => pertTask.id === draggedTask.id)
       ) {
-        let dropX = 100;
-        let dropY = 100;
-
-        // Calculate position relative to PERT area
-        if (pertAreaRef.current) {
-          const rect = pertAreaRef.current.getBoundingClientRect();
-          const clientX =
-            event.activatorEvent instanceof MouseEvent
-              ? event.activatorEvent.clientX
-              : 0;
-          const clientY =
-            event.activatorEvent instanceof MouseEvent
-              ? event.activatorEvent.clientY
-              : 0;
-
-          dropX = clientX - rect.left;
-          dropY = clientY - rect.top;
-        }
-
+        const random = Math.random();
         setPertTasks([
           ...pertTasks,
           {
             ...draggedTask,
-            position: { x: dropX, y: dropY },
+            position: {
+              x: (pertTasks.length + random) * 100,
+              y: (pertTasks.length - random) * 100,
+            },
           },
         ]);
-
         const updatedTasks = tasks.filter((task) => task.id !== draggedTask.id);
         setTasks(updatedTasks);
       }
@@ -104,18 +94,11 @@ export default function Home() {
   return (
     <div className="flex h-screen">
       <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        {/* Task List */}
         <div className="w-1/3 border-r border-gray-200 p-4 overflow-y-auto">
           <h2 className="text-xl font-bold mb-4">Danh sách Task</h2>
           <TaskList tasks={tasks} />
         </div>
-
-        {/* PERT Diagram Drop Area */}
-        <div
-          id="pert-drop-area"
-          ref={pertAreaRef}
-          className="w-2/3 p-4 relative"
-        >
+        <div className="w-2/3 p-4">
           <h2 className="text-xl font-bold mb-4">Sơ đồ PERT</h2>
           <PertDiagram
             tasks={pertTasks}
@@ -123,8 +106,6 @@ export default function Home() {
             onEdgesChange={onEdgesChange}
           />
         </div>
-
-        {/* Drag Preview Overlay */}
         <DragOverlay>
           {activeId ? (
             <TaskCard
