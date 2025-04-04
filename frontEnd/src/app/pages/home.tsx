@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import TaskCompleteRow from '../../component/TaskCompleteRow';  // Import the TaskRow component
-import TaskProcessRow from '../../component/TaskProcessRow';  // Import the TaskRow component
-import TaskToDoRow from '../../component/TaskToDoRow';  // Import the TaskRow component
-import AddTaskButton from '../../component/AddTaskButton';  // Import the AddTaskButton component
+import TaskCompleteRow from '../component/TaskCompleteRow';  // Import the TaskRow component
+import TaskProcessRow from '../component/TaskProcessRow';  // Import the TaskRow component
+import TaskToDoRow from '../component/TaskToDoRow';  // Import the TaskRow component
+import AddTaskButton from '../component/AddTaskButton';  // Import the AddTaskButton component
 
 const TaskManagementUI = () => {
   const [tasks, setTasks] = useState([
     { id: 1, name: 'Task 1', subtasks: 1, status: 'TO DO', completed: true },
-    { id: 2, name: 'Task 2', subtasks: 3, status: 'COMPLETE', completed: false },
+    { id: 2, name: 'Task 2', subtasks: 3, status: 'COMPLETE', completed: true },
     { id: 3, name: 'Task 3', subtasks: 4, status: 'IN PROGRESS', completed: true },
     { id: 4, name: 'Task 4', subtasks: 2, status: 'COMPLETE', completed: true }
   ]);
