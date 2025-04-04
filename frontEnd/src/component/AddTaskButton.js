@@ -20,7 +20,6 @@ const AddTaskButton = ({ setTasks, tasks }) => {
 
     setTasks([...tasks, newTask]);
     setTaskName('');
-    setSubtasks(0);
     setStatus('TO DO');
     setCompleted(false);
     setIsOpen(false);

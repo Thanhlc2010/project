@@ -1,3 +1,4 @@
+"use client";
 import React, { useState } from 'react';
 import TaskCompleteRow from '../../component/TaskCompleteRow';  // Import the TaskRow component
 import TaskProcessRow from '../../component/TaskProcessRow';  // Import the TaskRow component

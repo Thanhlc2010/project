@@ -33,7 +33,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "src/app/component/TaskCompleteRow.js"
+    "src/component/TaskCompleteRow.js"
   ],
   "exclude": [
     "node_modules"
