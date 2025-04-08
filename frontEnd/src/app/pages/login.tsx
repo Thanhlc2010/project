@@ -1,60 +1,30 @@
-"use client";
-import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import React, { useState } from 'react';
 
 const LoginForm: React.FC = () => {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const route = useRouter();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const users = JSON.parse(localStorage.getItem("users")!) || [];
-    const userExists = users.some(
-      (user: { username: string; password: string }) =>
-        user.username === username && user.password === password
-    );
-    if (userExists) {
-      route.push("/");
-      localStorage.setItem("authenticated", "true");
-    } else {
-      alert("Invalid username or password");
-      return;
-    }
+    console.log('Login attempted with:', { username, password });
+    // Add your authentication logic here
   };
-  useEffect(() => {
-    const authenticated = localStorage.getItem("authenticated");
-    if (authenticated === "true") {
-      route.push("/");
-    }
-  }, [route]);
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center bg-cover bg-no-repeat"
-      style={{
-        backgroundImage:
-          "url('https://raw.githubusercontent.com/CiurescuP/LogIn-Form/main/bg.jpg')",
-      }}
-    >
-      <form
+    <div className="min-h-screen flex items-center justify-center bg-cover bg-no-repeat" 
+         style={{ backgroundImage: "url('https://raw.githubusercontent.com/CiurescuP/LogIn-Form/main/bg.jpg')" }}>
+      <form 
         onSubmit={handleSubmit}
         className="w-full max-w-md h-auto p-5 rounded-2xl border-5 border-white border-opacity-10 
                   bg-white bg-opacity-10 backdrop-blur-sm shadow-lg relative"
-        style={{ boxShadow: "0 0 40px rgba(129, 236, 174, 0.6)" }}
+        style={{ boxShadow: '0 0 40px rgba(129, 236, 174, 0.6)' }}
       >
-        <h3 className="text-4xl font-semibold text-white text-center mb-6">
-          Login Here
-        </h3>
-
-        <label
-          htmlFor="username"
-          className="block text-2xl font-bold text-white mt-6 mb-2"
-        >
+        <h3 className="text-4xl font-semibold text-white text-center mb-6">Login Here</h3>
+        
+        <label htmlFor="username" className="block text-2xl font-bold text-white mt-6 mb-2">
           Username
         </label>
         <input
-          required
           type="text"
           id="username"
           placeholder="Email or Phone"
@@ -64,15 +34,11 @@ const LoginForm: React.FC = () => {
                     border-gray-700 border-opacity-30 focus:outline-none focus:bg-gray-700 
                     hover:bg-gray-700 transition-all duration-500"
         />
-
-        <label
-          htmlFor="password"
-          className="block text-2xl font-bold text-white mb-2"
-        >
+        
+        <label htmlFor="password" className="block text-2xl font-bold text-white mb-2">
           Password
         </label>
         <input
-          required
           type="password"
           id="password"
           placeholder="Password"
@@ -82,7 +48,7 @@ const LoginForm: React.FC = () => {
                     border-gray-700 border-opacity-30 focus:outline-none focus:bg-gray-700 
                     hover:bg-gray-700 transition-all duration-500"
         />
-
+        
         <button
           type="submit"
           className="w-full p-2 mt-8 mb-4 text-lg font-semibold text-gray-100 bg-black bg-opacity-20 
@@ -91,17 +57,11 @@ const LoginForm: React.FC = () => {
         >
           Log In
         </button>
-
+        
         <p className="text-lg text-white text-center mb-4">
-          Do not have an account?{" "}
-          <Link
-            href="/register"
-            className="text-green-500 hover:text-green-700 transition-all duration-500"
-          >
-            Register
-          </Link>
+          Login with a social media account
         </p>
-
+        
         <div className="flex justify-center items-center space-x-3">
           <button
             type="button"

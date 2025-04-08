@@ -10,6 +10,8 @@ import {
   DragStartEvent,
 } from "@dnd-kit/core";
 import TaskCard from "../component/PERTComponents/TaskCard";
+import { useRouter } from "next/navigation";
+
 
 interface Task {
   id: string;
@@ -48,6 +50,15 @@ export default function Home() {
     };
     loadTasks();
   }, []);
+
+  const route = useRouter();
+  useEffect(() => {
+    const authenticated = localStorage.getItem("authenticated");
+    if (!authenticated || authenticated === "false") {
+      route.push("/login");
+    }
+  }, [route]);
+
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
