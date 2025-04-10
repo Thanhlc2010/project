@@ -67,7 +67,7 @@ export default function IconButton({ onClick }) {
     }
     setTimeout(() => {
         setShowPopup(true);
-      }, 300); // 300ms delay before hiding
+      }, 300); // 300ms delay before showing
   };
 
   const handleMouseLeave = () => {
@@ -102,7 +102,13 @@ export default function IconButton({ onClick }) {
       {showPopup && (
         <div 
           ref={popupRef}
-          className="absolute left-0 top-full mt-2 bg-white rounded shadow-lg border border-gray-200 z-50 w-80"
+          className="absolute left-0 top-full mt-2 bg-white rounded shadow-lg border border-gray-200 z-[1000] w-80"
+          style={{ 
+            position: 'fixed', 
+            transform: 'translateY(10px)',
+            left: iconRef.current ? iconRef.current.getBoundingClientRect().left : 0,
+            top: iconRef.current ? iconRef.current.getBoundingClientRect().bottom : 0 
+          }}
           onMouseDown={handlePopupMouseDown}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}

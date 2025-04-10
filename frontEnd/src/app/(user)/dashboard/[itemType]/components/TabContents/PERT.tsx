@@ -4,27 +4,27 @@ import { DndContext, DragOverlay, DragEndEvent, DragStartEvent } from '@dnd-kit/
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 
-import mockData from '../../mocks/PERTData.json';
-import PertDiagram from '../component/PERTComponents/PertDiagram';
-import TaskCard from '../component/PERTComponents/TaskCard';
-import TaskList from '../component/PERTComponents/TaskList';
+import mockData from '../../../../../../mocks/PERTData.json';
+import PertDiagram from '../../components/PERTComponents/PertDiagram';
+import TaskCard from '../../components/PERTComponents/TaskCard';
+import TaskList from '../../components/PERTComponents/TaskList';
 
 interface Task {
-	id: string;
-	name: string;
-	duration: number;
-	dependencies: string[];
-	priority: 'high' | 'medium' | 'low';
-	position?: { x: number; y: number };
+    id: string;
+    name: string;
+    duration: number;
+    dependencies: string[];
+    priority: 'high' | 'medium' | 'low';
+    position?: { x: number; y: number };
 }
 
 interface Edge {
-	id: string;
-	source: string;
-	target: string;
-	type?: string;
-	animated?: boolean;
-	style?: any;
+    id: string;
+    source: string;
+    target: string;
+    type?: string;
+    animated?: boolean;
+    style?: any;
 }
 
 export default function Home() {
@@ -38,7 +38,7 @@ export default function Home() {
 
   useEffect(() => {
     const loadTasks = async () => {
-      const module = await import("../../mocks/PERTData.json");
+      const module = await import("../../../../../../mocks/PERTData.json");
       const loadedTasks = module.default.map((task: any) => ({
         ...task,
         priority: task.priority as "high" | "medium" | "low",
