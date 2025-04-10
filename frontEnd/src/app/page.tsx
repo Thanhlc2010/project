@@ -135,7 +135,7 @@ const TaskManagementUI = () => {
           </thead>
           <tbody>
             {tasks.filter(task => task.status === 'COMPLETE').map(task => (
-              <TaskCompleteRow key={task.id} task={task} />
+              <TaskCompleteRow key={task.id} task={task} setTasks={setTasks} />
             ))}
             <tr className="border-b border-gray-200 hover:bg-gray-50 text-gray-500 cursor-pointer">
               <td colSpan={9} className="px-4 py-3">
