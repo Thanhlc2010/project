@@ -530,6 +530,142 @@ const TaskManagementUI = () => {
 		);
 	};
 
+	const TaskDetailModal: React.FC<{
+		task: Task;
+		onClose: () => void;
+		onUpdate: (updatedTask: Task) => void;
+	}> = ({ task, onClose, onUpdate }) => {
+		const [editedTask, setEditedTask] = useState<Task>({ ...task });
+	
+		const handleChange = (field: keyof Task, value: any) => {
+			setEditedTask({ ...editedTask, [field]: value });
+		};
+	
+		const handleSave = () => {
+			onUpdate(editedTask);
+			onClose();
+		};
+	
+		const statusOptions: Task['status'][] = ['TO DO', 'IN PROGRESS', 'COMPLETE'];
+	
+		return (
+			<div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start z-50 p-6">
+				<div className="bg-white rounded-xl w-full max-w-3xl shadow-xl p-6 relative mt-10 overflow-y-auto max-h-[90vh]">
+					{/* Close button */}
+					<button
+						onClick={onClose}
+						className="absolute top-4 right-4 text-gray-500 hover:text-black text-xl"
+					>
+						✕
+					</button>
+	
+					{/* Editable Task Name */}
+					<div className="flex items-center justify-between mb-4">
+						<input
+							type="checkbox"
+							checked={editedTask.completed}
+							onChange={(e) => handleChange('completed', e.target.checked)}
+							className="rounded text-violet-500 focus:ring-violet-500 px-4 py-3"
+						/>
+						<input
+							type="text"
+							className="w-full text-2xl font-bold mb-4 border-b pb-1 focus:outline-none focus:ring-0 focus:border-violet-500 px-4 py-3"
+							value={editedTask.name}
+							onChange={(e) => handleChange('name', e.target.value)}
+						/>
+					</div>
+					
+	
+					{/* Task info */}
+					<div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
+						<div>
+							<strong>Status:</strong>
+							<select
+								value={editedTask.status}
+								onChange={(e) => handleChange('status', e.target.value as Task['status'])}
+								className="ml-2 border rounded p-1 bg-white focus:outline-none focus:ring-1 focus:ring-violet-500"
+							>
+								{statusOptions.map((s) => (
+									<option key={s} value={s}>
+										{s}
+									</option>
+								))}
+							</select>
+						</div>
+	
+						<div>
+							<strong>Priority:</strong>
+							<div className="inline-block ml-2">
+								<PrioritySelector
+									taskId={editedTask.id}
+									priority={editedTask.priority}
+									updatePriority={(_, newPriority) =>
+										handleChange('priority', newPriority)
+									}
+								/>
+							</div>
+						</div>
+	
+						<div>
+							<strong>Assignees:</strong>
+							<div className="mt-1">
+								<AssigneeSelector
+									taskId={editedTask.id}
+									assignees={editedTask.assignees}
+									// updateAssignees={(userIds: string[]) => {
+									// 	const newAssignees = users.filter((u) => userIds.includes(u.id));
+									// 	handleChange('assignees', newAssignees);
+									// }}
+								/>
+							</div>
+						</div>
+	
+						<div>
+							<strong>Due date:</strong>
+							<div className="flex items-center mt-1 relative">
+								<input
+									type="date"
+									value={editedTask.dueDate || ''}
+									onChange={(e) => handleChange('dueDate', e.target.value)}
+									className="border rounded-md p-1.5 pl-8 focus:ring-violet-500 focus:border-violet-500"
+								/>
+								<Calendar className="w-4 h-4 text-gray-400 absolute left-2" />
+							</div>
+						</div>
+					</div>
+
+					{/* Description */}
+					<div className="mt-6">
+						<h3 className="text-sm font-semibold text-gray-700 mb-1">Description</h3>
+						<textarea
+							defaultValue={''}
+							placeholder="Write task details here..."
+							className="w-full border rounded-md p-2 text-sm text-gray-800 focus:ring-violet-500 focus:border-violet-500 min-h-[120px]"
+						/>
+					</div>
+	
+					{/* Save/Cancel buttons */}
+					<div className="mt-6 flex justify-end gap-2">
+						<button
+							onClick={onClose}
+							className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+						>
+							Cancel
+						</button>
+						<button
+							onClick={handleSave}
+							className="px-4 py-2 bg-violet-600 text-white rounded hover:bg-violet-700"
+						>
+							Save
+						</button>
+					</div>
+				</div>
+			</div>
+		);
+	};
+	
+	
+
 	const TaskRow: React.FC<TaskRowProps> = ({ task }) => {
 		const [isEditing, setIsEditing] = useState<boolean>(false);
 		const [editedName, setEditedName] = useState<string>(task.name);
@@ -538,6 +674,11 @@ const TaskManagementUI = () => {
 		const [showSubtasks, setShowSubtasks] = useState<boolean>(false);
 		const [newSubtaskName, setNewSubtaskName] = useState<string>('');
 		const [addingSubtask, setAddingSubtask] = useState<boolean>(false);
+		const [isModalOpen, setModalOpen] = useState(false);
+
+		const handleRowClick = () => {
+			setModalOpen(true);
+		};
 
 		const handleNameSave = (): void => {
 			if (editedName.trim() !== '') {
@@ -588,10 +729,11 @@ const TaskManagementUI = () => {
 		return (
 			<>
 				<tr
-					className={`border-b border-gray-200 hover:bg-gray-50 ${draggedTaskId === task.id ? 'opacity-50' : ''} transition-colors`}
+					className={`border-b border-gray-200 hover:bg-gray-50 ${draggedTaskId === task.id ? 'opacity-50' : ''} transition-colors cursor-pointer`}
 					draggable="true"
 					onDragStart={handleDragStart}
-					onDragEnd={handleDragEnd}>
+					onDragEnd={handleDragEnd}
+					onClick={handleRowClick}>
 					<td className="px-4 py-3">
 						<div className="flex items-center justify-center">
 							<input
@@ -847,9 +989,18 @@ const TaskManagementUI = () => {
 						</td>
 					</tr>
 				)}
+
+				{isModalOpen && (
+					<TaskDetailModal
+						task={task}
+						onClose={() => setModalOpen(false)}
+						onUpdate={(updatedTask) => { setTasks(tasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)));}}
+					/>
+				)}
 			</>
 		);
 	};
+
 	const SubtaskRow: React.FC<{
 		parentTaskId: number;
 		subtask: Task;
@@ -995,6 +1146,7 @@ const TaskManagementUI = () => {
 			</tr>
 		);
 	};
+
 	const NewTaskRow: React.FC<NewTaskRowProps> = ({ status }) => {
 		const [localTaskName, setLocalTaskName] = useState<string>('');
 
