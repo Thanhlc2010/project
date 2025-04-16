@@ -788,9 +788,10 @@ const TaskManagementUI = () => {
 									)}
 
 									<span
-										className={
-											task.completed ? 'line-through text-gray-500' : ''
-										}>
+										// className={
+										// 	// task.completed ? 'line-through text-gray-500' : ''
+										// }
+									>
 										{task.name}
 									</span>
 									
