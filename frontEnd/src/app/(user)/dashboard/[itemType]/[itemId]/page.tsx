@@ -1,36 +1,22 @@
 'use client';
 
-import { redirect, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 import NavHeader from '../components/NavHeader';
-import FolderDetails from '../components/TabContents/FolderDetails';
 import ListDetails from '../components/TabContents/ListDetails';
-import SpaceDetails from '../components/TabContents/SpaceDetails';
+import PertDetails from '../components/TabContents/PERTDetails';
+import WorkspaceDetails from '../components/TabContents/WorkspaceDetails';
 import { getAvailableTabs } from '../helpers/getAvailableTabs';
 import { AvailableTabs } from '../types';
-import { APP_ROUTES } from '@/common/constants';
-import { Space, SpaceItem } from '@/common/types';
-import { useSpaceStore } from '@/store/spaceStore';
+import { Task } from '@/common/types'
 
-export default function ListPage() {
+export default function ItemPage() {
 	const params = useParams();
-	const spaces = useSpaceStore((state) => state.spaces);
-	const findItem = useSpaceStore((state) => state.findItem);
 	const [activeTab, setActiveTab] = useState(AvailableTabs.OVERVIEW);
 
 	const itemType = params.itemType as string;
 	const itemId = params.itemId as string;
-
-	let item: SpaceItem | Space | undefined = undefined;
-
-	// Check if the item is a list or folder
-	if (itemType === 'l' || itemType === 'f') {
-		item = findItem(itemId) as SpaceItem;
-	} else if (itemType === 's') {
-		// Check if the item is a space
-		item = spaces.find((space) => space.id === itemId) as Space;
-	}
 
 	const availableTabs = useMemo(() => getAvailableTabs(itemType), [itemType]);
 	useEffect(() => {
@@ -39,21 +25,17 @@ export default function ListPage() {
 		}
 	}, [availableTabs]);
 
-	if (!item) {
-		return redirect(APP_ROUTES.DASHBOARD);
-	}
-
 	return (
-		<div className=" w-full">
+		<div className="w-full">
 			<NavHeader
 				activeTab={activeTab}
 				setActiveTab={setActiveTab}
 				availableTabs={availableTabs}
 			/>
-			<div className="  p-6">
+			<div className="p-6">
 				{itemType === 'l' && <ListDetails tab={activeTab} />}
-				{itemType === 'f' && <FolderDetails folderId={itemId} tab={activeTab} />}
-				{itemType === 's' && <SpaceDetails space={item as Space} tab={activeTab} />}
+				{itemType === 'p' && <PertDetails id={itemId} />}
+				{itemType === 's' && <WorkspaceDetails tab={activeTab} workspaceId={itemId} />}
 			</div>
 		</div>
 	);
