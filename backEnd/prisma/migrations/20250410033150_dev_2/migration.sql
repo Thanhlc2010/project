@@ -1,0 +1,8 @@
+-- AlterTable
+ALTER TABLE `project_members` ADD COLUMN `status` ENUM('ACTIVE', 'INACTIVE') NOT NULL DEFAULT 'ACTIVE';
+
+-- AlterTable
+ALTER TABLE `projects` ADD COLUMN `status` ENUM('ACTIVE', 'INACTIVE') NOT NULL DEFAULT 'ACTIVE';
+
+-- AlterTable
+ALTER TABLE `workspaces` ADD COLUMN `status` ENUM('ACTIVE', 'INACTIVE') NOT NULL DEFAULT 'ACTIVE';
