@@ -1,8 +1,7 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import React from 'react';
-import { useEffect, useRef, useState } from 'react';
 
 import { APP_ROUTES } from '@/common/constants';
 import { SpaceItemType } from '@/common/types';
@@ -14,60 +13,98 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { useWorkspaceStore } from '@/store/workspaceStore';
+import { useSpaceStore } from '@/store/spaceStore';
 
 export function DashboardBreadcrumb() {
 	const params = useParams();
-	const findPathToItem = useWorkspaceStore((state) => state.findPathToItem);
+	const spaces = useSpaceStore((state) => state.spaces);
+	const findPathToItem = useSpaceStore((state) => state.findPathToItem);
+
 	const itemType = params.itemType as string;
 	const itemId = params.itemId as string;
-	const pertId = params.pertId as string; // Thêm pertId từ params
 
 	if (!itemType || !itemId) {
 		return null;
 	}
 
-	const path = findPathToItem(itemId);
-
-	if (path) {
-		return (
-			<>
+	if (itemType === 's') {
+		const space = spaces.find((s) => s.id === itemId);
+		if (space) {
+			return (
 				<Breadcrumb>
 					<BreadcrumbList>
 						<BreadcrumbItem>
 							<BreadcrumbLink href={APP_ROUTES.DASHBOARD}>Dashboard</BreadcrumbLink>
 						</BreadcrumbItem>
 						<BreadcrumbSeparator />
-						{path.map((item, index) => (
-							<React.Fragment key={`item_${item.type}-${item.id}-${index}`}>
+						<BreadcrumbItem>
+							<BreadcrumbPage>{space.name}</BreadcrumbPage>
+						</BreadcrumbItem>
+					</BreadcrumbList>
+				</Breadcrumb>
+			);
+		}
+	}
+
+	if (itemType === 'l' || itemType === 'f') {
+		const itemPath = findPathToItem(itemId);
+
+		if (itemPath) {
+			const breadcrumbItems = [
+				{
+					id: 'dashboard',
+					name: 'Dashboard',
+					href: APP_ROUTES.DASHBOARD,
+					isLast: false,
+				},
+				{
+					id: itemPath.spaceId,
+					name: itemPath.spaceName,
+					href: `/dashboard/s/${itemPath.spaceId}`,
+					isLast: itemPath.path.length === 0,
+				},
+				...itemPath.path.map((item, index) => ({
+					id: item.id,
+					name: item.name,
+					href: `/dashboard/${item.type === SpaceItemType.FOLDER ? 'f' : 'l'}/${item.id}`,
+					isLast: index === itemPath.path.length - 1,
+				})),
+			];
+
+			return (
+				<Breadcrumb>
+					<BreadcrumbList>
+						{breadcrumbItems.map((item, index) => (
+							<React.Fragment key={item.id}>
 								<BreadcrumbItem>
-									<BreadcrumbLink
-										href={`${APP_ROUTES.DASHBOARD}/${item.type}/${item.id}`}>
-										{item.name}
-									</BreadcrumbLink>
+									{item.isLast ? (
+										<BreadcrumbPage>{item.name}</BreadcrumbPage>
+									) : (
+										<BreadcrumbLink href={item.href}>
+											{item.name}
+										</BreadcrumbLink>
+									)}
 								</BreadcrumbItem>
-								{index < path.length - 1 && <BreadcrumbSeparator />}
+								{index < breadcrumbItems.length - 1 && <BreadcrumbSeparator />}
 							</React.Fragment>
 						))}
 					</BreadcrumbList>
 				</Breadcrumb>
-			</>
-		);
+			);
+		}
 	}
 
 	return (
-		<>
-			<Breadcrumb>
-				<BreadcrumbList>
-					<BreadcrumbItem>
-						<BreadcrumbLink href={APP_ROUTES.DASHBOARD}>Dashboard</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbPage>Unknown Route</BreadcrumbPage>
-					</BreadcrumbItem>
-				</BreadcrumbList>
-			</Breadcrumb>
-		</>
+		<Breadcrumb>
+			<BreadcrumbList>
+				<BreadcrumbItem>
+					<BreadcrumbLink href={APP_ROUTES.DASHBOARD}>Dashboard</BreadcrumbLink>
+				</BreadcrumbItem>
+				<BreadcrumbSeparator />
+				<BreadcrumbItem>
+					<BreadcrumbPage>Unknown Route</BreadcrumbPage>
+				</BreadcrumbItem>
+			</BreadcrumbList>
+		</Breadcrumb>
 	);
 }

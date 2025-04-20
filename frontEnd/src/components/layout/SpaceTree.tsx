@@ -1,118 +1,69 @@
-import { List as ListIcon, MoreHorizontal, Plus, Trash } from 'lucide-react';
+import { ChevronRight, Folder, List } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { toast } from 'sonner';
 
-import CreatePertDialog from '../CreatePertDialog';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
-import { Project } from '@/common/types';
-import { SidebarMenuButton } from '@/components/ui/sidebar';
+import { SpaceItem, SpaceItemType } from '@/common/types';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { SidebarMenuButton, SidebarMenuItem, SidebarMenuSub } from '@/components/ui/sidebar';
 import { useActiveItem } from '@/hooks/useActiveItem';
-import { useWorkspaceStore } from '@/store/workspaceStore';
 
 interface SpaceTreeProps {
-	item: Project;
+	item: SpaceItem;
 }
 
 function SpaceTree({ item }: SpaceTreeProps) {
 	const router = useRouter();
-	const deleteProject = useWorkspaceStore((state) => state.deleteProject);
 	const { isActive, shouldExpandItem } = useActiveItem(item.id);
-	const [isCreatePertDialogOpen, setIsCreatePertDialogOpen] = useState(false);
+	const [isFolderExpanding, setIsFolderExpanding] = useState(shouldExpandItem);
+
+	const { name, type, children = [] } = item;
+	const isFolder = type === SpaceItemType.FOLDER;
 
 	const goToList = (listId: string) => () => {
 		router.push(`/dashboard/l/${listId}`);
 	};
-
-	const goToPert = (pertId: string) => () => {
-		router.push(`/dashboard/p/${pertId}`);
+	const goToFolder = (folderId: string) => () => {
+		router.push(`/dashboard/f/${folderId}`);
 	};
 
-	const handleClickDelete = (event: React.MouseEvent<HTMLDivElement>) => {
+	const handleToggleFolder = (event: React.MouseEvent<HTMLButtonElement>) => {
 		event.stopPropagation();
-
-		setTimeout(() => {
-			handleDeleteProject();
-		}, 300);
 	};
 
-	const handleDeleteProject = async () => {
-		try {
-			await deleteProject(item.id);
-			toast.success('Project deleted successfully');
-		} catch (error) {
-			console.error('Error deleting project:', error);
-		}
-	};
-
-	const handleCreatePertClick = (event: React.MouseEvent<HTMLDivElement>) => {
-		event.stopPropagation();
-		setIsCreatePertDialogOpen(true);
-	};
-
-	const handleCreatePertConfirm = async (pertData: {
-		projectId: string;
-		pertName: string;
-		description: string;
-		selectedTasks: {
-		  taskId: number;
-		  taskName: string;
-		  duration: number;
-		}[];
-	  }) => {
-		console.log('Received data from dialog:', pertData);
-	  
-		// Gợi ý: tính toán thời gian dự kiến từ selectedTasks nếu cần
-	  
-		setIsCreatePertDialogOpen(false);
-		toast.success('PERT task created (placeholder)');
-	  };
-
+	if (isFolder) {
+		return (
+			<SidebarMenuItem>
+				<Collapsible
+					defaultOpen={shouldExpandItem}
+					open={isFolderExpanding || shouldExpandItem}
+					onOpenChange={setIsFolderExpanding}
+					className="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90">
+					<SidebarMenuButton
+						isActive={isActive}
+						className="[&>svg:first-child]:hidden [&:hover>svg:first-child]:block [&:hover>svg:last-child]:hidden"
+						onClick={goToFolder(item.id)}>
+						<CollapsibleTrigger asChild onClick={handleToggleFolder}>
+							<ChevronRight className="transition-transform" />
+						</CollapsibleTrigger>
+						<Folder className="transition-opacity duration-200" />
+						{name}
+					</SidebarMenuButton>
+					<CollapsibleContent>
+						<SidebarMenuSub className="m-0 pr-0">
+							{children.map((subItem: SpaceItem, index: number) => (
+								<SpaceTree key={index} item={subItem} />
+							))}
+						</SidebarMenuSub>
+					</CollapsibleContent>
+				</Collapsible>
+			</SidebarMenuItem>
+		);
+	}
 	return (
-		<>
-			<DropdownMenu>
-				<SidebarMenuButton
-					isActive={isActive}
-					onClick={goToList(item.id)}
-					className="flex items-center justify-between">
-					<div className="flex items-center gap-2">
-						<ListIcon />
-						<span className="text-ellipsis overflow-hidden whitespace-nowrap">
-							{item.name}
-						</span>
-					</div>
-					<DropdownMenuTrigger asChild>
-						<MoreHorizontal className="ml-auto" />
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="start" className="min-w-32 rounded-lg">
-						<DropdownMenuItem asChild onClick={handleCreatePertClick}>
-							<div className="flex gap-2">
-								<Plus className="h-4 w-4" />
-								Add PERT Task
-							</div>
-						</DropdownMenuItem>
-						<DropdownMenuItem asChild onClick={handleClickDelete}>
-							<div className="flex gap-2 text-red-500">
-								<Trash className="h-4 w-4" />
-								Delete
-							</div>
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</SidebarMenuButton>
-			</DropdownMenu>
-
-			<CreatePertDialog
-				open={isCreatePertDialogOpen}
-				setOpen={setIsCreatePertDialogOpen}
-				onConfirm={handleCreatePertConfirm}
-				projectId={item.id}
-			/>
-		</>
+		<SidebarMenuButton isActive={isActive} onClick={goToList(item.id)}>
+			<List />
+			<span className="text-ellipsis overflow-hidden whitespace-nowrap">{name}</span>
+		</SidebarMenuButton>
 	);
 }
 

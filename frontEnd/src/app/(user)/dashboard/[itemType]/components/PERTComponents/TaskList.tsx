@@ -10,10 +10,6 @@ interface Task {
   dependencies: string[];
   priority: 'high' | 'medium' | 'low';
   position?: { x: number; y: number };
-  ES?: number;
-  EF?: number;
-  LS?: number;
-  LF?: number;
 }
 
 interface TaskListProps {

@@ -10,42 +10,42 @@
       "id": "task-2",
       "name": "Thiết kế database",
       "duration": 3,
-      "dependencies": [],
+      "dependencies": ["task-1"],
       "priority": "medium"
     },
     {
       "id": "task-3",
       "name": "Thiết kế UI/UX",
       "duration": 4,
-      "dependencies": [],
+      "dependencies": ["task-1"],
       "priority": "medium"
     },
     {
       "id": "task-4",
       "name": "Phát triển Backend",
       "duration": 8,
-      "dependencies": [],
+      "dependencies": ["task-2"],
       "priority": "high"
     },
     {
       "id": "task-5",
       "name": "Phát triển Frontend",
       "duration": 6,
-      "dependencies": [],
+      "dependencies": ["task-3"],
       "priority": "high"
     },
     {
       "id": "task-6",
       "name": "Kiểm thử",
       "duration": 4,
-      "dependencies": [],
+      "dependencies": ["task-4", "task-5"],
       "priority": "medium"
     },
     {
       "id": "task-7",
       "name": "Triển khai",
       "duration": 2,
-      "dependencies": [],
+      "dependencies": ["task-6"],
       "priority": "low"
     }
   ]

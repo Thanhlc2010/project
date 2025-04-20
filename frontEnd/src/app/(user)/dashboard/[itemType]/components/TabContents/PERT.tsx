@@ -3,25 +3,34 @@
 import { DndContext, DragOverlay, DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
+
+import mockData from '../../../../../../mocks/PERTData.json';
 import PertDiagram from '../../components/PERTComponents/PertDiagram';
 import TaskCard from '../../components/PERTComponents/TaskCard';
 import TaskList from '../../components/PERTComponents/TaskList';
-import { pertTask } from '@/common/types'
 
+interface Task {
+    id: string;
+    name: string;
+    duration: number;
+    dependencies: string[];
+    priority: 'high' | 'medium' | 'low';
+    position?: { x: number; y: number };
+}
 
 interface Edge {
-  id: string;
-  source: string;
-  target: string;
-  type?: string;
-  animated?: boolean;
-  style?: any;
+    id: string;
+    source: string;
+    target: string;
+    type?: string;
+    animated?: boolean;
+    style?: any;
 }
 
 export default function Home() {
 
-  const [tasks, setTasks] = useState<pertTask[]>([]);
-  const [pertTasks, setPertTasks] = useState<pertTask[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [pertTasks, setPertTasks] = useState<Task[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [edges, setEdges] = useState<Edge[]>([]);
   const pertAreaRef = useRef<HTMLDivElement>(null);
@@ -54,19 +63,15 @@ export default function Home() {
         draggedTask &&
         !pertTasks.some((pertTask) => pertTask.id === draggedTask.id)
       ) {
-        const canvasBounds = document.getElementById('pert-drop-area')?.getBoundingClientRect();
-
-        const offsetX = canvasBounds?.left ?? 0;
-        const offsetY = canvasBounds?.top ?? 0;
-
         const position = reactFlowInstance.screenToFlowPosition({
-          x: (event.activatorEvent instanceof MouseEvent ? event.activatorEvent.clientX : 0) + offsetX,
-          y: (event.activatorEvent instanceof MouseEvent ? event.activatorEvent.clientY : 0) + offsetY,
+          x: event.activatorEvent instanceof MouseEvent ? event.activatorEvent.clientX : 0,
+          y: event.activatorEvent instanceof MouseEvent ? event.activatorEvent.clientY : 0,
         });
-        // console.log("Screen:", event.delta.x, event.delta.y);
-        // console.log("Flow:", position.x, position.y);
 
-        console.log("before ",pertTasks);
+        console.log("Screen:", event.delta.x, event.delta.y);
+        console.log("Flow:", position.x, position.y);
+        
+
         setPertTasks([
           ...pertTasks,
           {
@@ -74,8 +79,6 @@ export default function Home() {
             position: { x: position.x, y: position.y },
           },
         ]);
-        console.log("after ",pertTasks);
-
 
         const updatedTasks = tasks.filter((task) => task.id !== draggedTask.id);
         setTasks(updatedTasks);
@@ -110,7 +113,6 @@ export default function Home() {
             edges={edges}
             onEdgesChange={onEdgesChange}
             onInit={onInit}
-            onTasksChange={setPertTasks}
           />
         </div>
 

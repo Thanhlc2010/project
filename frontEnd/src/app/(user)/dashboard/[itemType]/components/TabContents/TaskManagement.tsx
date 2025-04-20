@@ -32,10 +32,6 @@ interface Task {
 	priority: 'Low' | 'Normal' | 'High' | 'Urgent';
 	comments: string[];
 	parentId?: number; // Optional parent ID for tracking hierarchy
-	ES?: number;
-	EF?: number;
-	LS?: number;
-	LF?: number;
 }
 
 interface TaskRowProps {
@@ -63,6 +59,18 @@ const users: User[] = [
 
 const TaskManagementUI = () => {
 	const route = useRouter();
+
+	useEffect(() => {
+		const authenticated = localStorage.getItem('authenticated');
+		if (!authenticated || authenticated === 'false') {
+			route.push('/login');
+		}
+	}, [route]);
+
+	const logoutHandler = () => {
+		localStorage.removeItem('authenticated');
+		route.push('/login');
+	};
 
 	const [tasks, setTasks] = useState<Task[]>([
 		{
@@ -643,7 +651,7 @@ const TaskManagementUI = () => {
 										}>
 										{task.name}
 									</span>
-
+									
 								</div>
 								<div className="pl-2">
 									<IconButton onClick={() => { }} />
@@ -1228,6 +1236,13 @@ const TaskManagementUI = () => {
 						<circle cx="12" cy="8" r="1" fill="currentColor" />
 						<circle cx="4" cy="8" r="1" fill="currentColor" />
 					</svg>
+				</div>
+				<div>
+					<button
+						onClick={logoutHandler}
+						className="text-xs text-white px-4 py-2 rounded-full bg-red-500 hover:bg-blue-600">
+						Logout
+					</button>
 				</div>
 			</div>
 

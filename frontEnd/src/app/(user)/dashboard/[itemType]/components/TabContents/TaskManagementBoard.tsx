@@ -1,19 +1,10 @@
 'use client';
 
-import {
-	Calendar,
-	MessageSquare,
-	MoreHorizontal,
-	Plus,
-	Search,
-	Trash2,
-	User as UserIcon,
-} from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
-
 import IconButton from '@/app/component/descriptionButton';
 import { Task, User, useTaskStore, users } from '@/mocks/TaskData';
+import { Calendar, MessageSquare, MoreHorizontal, Plus, Search, Trash2, User as UserIcon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 
 interface TaskCardProps {
 	task: Task;
@@ -132,34 +123,34 @@ const PrioritySelector: React.FC<{
 
 	return (
 		<div className="relative" ref={dropdownRef}>
-			<div ref={buttonRef} className="cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
+			<div
+				ref={buttonRef}
+				className="cursor-pointer"
+				onClick={() => setIsOpen(!isOpen)}>
 				<PriorityFlag priority={priority} />
 			</div>
 
 			{isOpen && (
 				<div
-					className={`fixed z-50 min-w-36 bg-white border rounded shadow-lg ${
-						dropdownPosition === 'top' ? 'bottom-full mb-1' : 'mt-1'
-					}`}
+					className={`fixed z-50 min-w-36 bg-white border rounded shadow-lg ${dropdownPosition === 'top' ? 'bottom-full mb-1' : 'mt-1'
+						}`}
 					style={{
 						left: buttonRef.current?.getBoundingClientRect().left + 'px',
-						top:
-							dropdownPosition === 'top'
-								? undefined
-								: (buttonRef.current?.getBoundingClientRect().bottom || 0) + 'px',
-						bottom:
-							dropdownPosition === 'top'
-								? window.innerHeight -
-									(buttonRef.current?.getBoundingClientRect().top || 0) +
-									'px'
-								: undefined,
-					}}>
+						top: dropdownPosition === 'top'
+							? undefined
+							: (buttonRef.current?.getBoundingClientRect().bottom || 0) + 'px',
+						bottom: dropdownPosition === 'top'
+							? (window.innerHeight - (buttonRef.current?.getBoundingClientRect().top || 0)) + 'px'
+							: undefined,
+					}}
+				>
 					<div className="p-2">
 						{priorities.map((p) => (
 							<div
 								key={p}
 								className={`p-2 cursor-pointer hover:bg-gray-100 rounded ${p === priority ? 'bg-gray-50' : ''}`}
-								onClick={() => handleSelect(p)}>
+								onClick={() => handleSelect(p)}
+							>
 								<PriorityFlag priority={p} />
 							</div>
 						))}
@@ -235,22 +226,18 @@ const DateSelector: React.FC<{
 
 			{isOpen && (
 				<div
-					className={`fixed z-50 bg-white border rounded shadow-lg p-3 ${
-						dropdownPosition === 'top' ? 'bottom-full mb-1' : 'mt-1'
-					}`}
+					className={`fixed z-50 bg-white border rounded shadow-lg p-3 ${dropdownPosition === 'top' ? 'bottom-full mb-1' : 'mt-1'
+						}`}
 					style={{
 						left: buttonRef.current?.getBoundingClientRect().left + 'px',
-						top:
-							dropdownPosition === 'top'
-								? undefined
-								: (buttonRef.current?.getBoundingClientRect().bottom || 0) + 'px',
-						bottom:
-							dropdownPosition === 'top'
-								? window.innerHeight -
-									(buttonRef.current?.getBoundingClientRect().top || 0) +
-									'px'
-								: undefined,
-					}}>
+						top: dropdownPosition === 'top'
+							? undefined
+							: (buttonRef.current?.getBoundingClientRect().bottom || 0) + 'px',
+						bottom: dropdownPosition === 'top'
+							? (window.innerHeight - (buttonRef.current?.getBoundingClientRect().top || 0)) + 'px'
+							: undefined,
+					}}
+				>
 					<div className="p-2">
 						<h3 className="text-sm font-medium mb-2">Due date</h3>
 						<input
@@ -262,7 +249,8 @@ const DateSelector: React.FC<{
 						{dueDate && (
 							<button
 								className="w-full text-xs text-gray-600 hover:text-red-500 py-1"
-								onClick={handleRemoveDate}>
+								onClick={handleRemoveDate}
+							>
 								Remove date
 							</button>
 						)}
@@ -352,22 +340,18 @@ const AssigneeSelector: React.FC<{
 
 			{isOpen && (
 				<div
-					className={`fixed z-50 min-w-64 bg-white border rounded shadow-lg ${
-						dropdownPosition === 'top' ? 'bottom-full mb-1' : 'mt-1'
-					}`}
+					className={`fixed z-50 min-w-64 bg-white border rounded shadow-lg ${dropdownPosition === 'top' ? 'bottom-full mb-1' : 'mt-1'
+						}`}
 					style={{
 						left: buttonRef.current?.getBoundingClientRect().left + 'px',
-						top:
-							dropdownPosition === 'top'
-								? undefined
-								: (buttonRef.current?.getBoundingClientRect().bottom || 0) + 'px',
-						bottom:
-							dropdownPosition === 'top'
-								? window.innerHeight -
-									(buttonRef.current?.getBoundingClientRect().top || 0) +
-									'px'
-								: undefined,
-					}}>
+						top: dropdownPosition === 'top'
+							? undefined
+							: (buttonRef.current?.getBoundingClientRect().bottom || 0) + 'px',
+						bottom: dropdownPosition === 'top'
+							? (window.innerHeight - (buttonRef.current?.getBoundingClientRect().top || 0)) + 'px'
+							: undefined,
+					}}
+				>
 					{/* Search input */}
 					<div className="p-2 border-b">
 						<div className="relative rounded-md shadow-sm">
@@ -439,8 +423,13 @@ const AssigneeSelector: React.FC<{
 };
 
 const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
-	const { toggleTaskCompletion, deleteTask, addSubtask, updateTaskStatus, addCommentToTask } =
-		useTaskStore();
+	const {
+		toggleTaskCompletion,
+		deleteTask,
+		addSubtask,
+		updateTaskStatus,
+		addCommentToTask,
+	} = useTaskStore();
 
 	const [showComments, setShowComments] = useState(false);
 	const [commentText, setCommentText] = useState('');
@@ -476,7 +465,8 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
 			className="bg-white rounded-md shadow-sm border border-gray-200 p-3 mb-3 cursor-move"
 			draggable
 			onDragStart={handleDragStart}
-			onDragEnd={handleDragEnd}>
+			onDragEnd={handleDragEnd}
+		>
 			<div className="flex items-start justify-between mb-2">
 				<div className="flex items-center space-x-2">
 					<input
@@ -485,23 +475,24 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
 						onChange={() => toggleTaskCompletion(task.id)}
 						className="rounded text-violet-500 focus:ring-violet-500"
 					/>
-					<h3
-						className={`font-medium ${task.completed ? 'line-through text-gray-500' : ''}`}>
+					<h3 className={`font-medium ${task.completed ? 'line-through text-gray-500' : ''}`}>
 						{task.name}
 					</h3>
 					<div className="pl-2">
-						<IconButton onClick={() => {}} />
+						<IconButton onClick={() => { }} />
 					</div>
 				</div>
 				<div className="flex items-center space-x-1.5">
 					<button
 						className="p-1 rounded hover:bg-gray-100"
-						onClick={() => setShowAddSubtask(!showAddSubtask)}>
+						onClick={() => setShowAddSubtask(!showAddSubtask)}
+					>
 						<Plus className="w-3.5 h-3.5 text-gray-500" />
 					</button>
 					<button
 						className="p-1 rounded hover:bg-gray-100"
-						onClick={() => deleteTask(task.id)}>
+						onClick={() => deleteTask(task.id)}
+					>
 						<Trash2 className="w-3.5 h-3.5 text-gray-500" />
 					</button>
 					<button className="p-1 rounded hover:bg-gray-100">
@@ -525,12 +516,14 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
 							onClick={() => {
 								setShowAddSubtask(false);
 								setSubtaskName('');
-							}}>
+							}}
+						>
 							Cancel
 						</button>
 						<button
 							className="px-2 py-1 text-xs bg-violet-600 text-white rounded hover:bg-violet-700"
-							onClick={handleAddSubtask}>
+							onClick={handleAddSubtask}
+						>
 							Add
 						</button>
 					</div>
@@ -565,7 +558,8 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
 
 				<button
 					className={`inline-flex items-center text-xs rounded px-1.5 py-0.5 ${task.comments.length > 0 ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-700'}`}
-					onClick={() => setShowComments(!showComments)}>
+					onClick={() => setShowComments(!showComments)}
+				>
 					<MessageSquare className="w-3 h-3 mr-1" />
 					{task.comments.length > 0 ? task.comments.length : 'Add'}
 				</button>
@@ -599,7 +593,8 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
 						/>
 						<button
 							className="px-2 text-xs bg-violet-600 text-white rounded-r"
-							onClick={handleAddComment}>
+							onClick={handleAddComment}
+						>
 							Add
 						</button>
 					</div>
@@ -653,7 +648,7 @@ const Column: React.FC<ColumnProps> = ({ status, tasks }) => {
 			icon: 'bg-blue-500',
 			header: 'border-blue-300',
 		},
-		COMPLETE: {
+		'COMPLETE': {
 			icon: 'bg-green-500',
 			header: 'border-green-300',
 		},
@@ -662,24 +657,21 @@ const Column: React.FC<ColumnProps> = ({ status, tasks }) => {
 	const statusDisplayNames = {
 		'TO DO': 'To Do',
 		'IN PROGRESS': 'In Progress',
-		COMPLETE: 'Complete',
+		'COMPLETE': 'Complete',
 	};
 
 	return (
 		<div className="w-full h-full flex flex-col bg-gray-100 rounded-md overflow-hidden">
-			<div
-				className={`px-3 py-2 border-b ${columnHeaderStyles[status].header} bg-white flex items-center justify-between`}>
+			<div className={`px-3 py-2 border-b ${columnHeaderStyles[status].header} bg-white flex items-center justify-between`}>
 				<div className="flex items-center">
-					<div
-						className={`w-3 h-3 rounded-full ${columnHeaderStyles[status].icon} mr-2`}></div>
+					<div className={`w-3 h-3 rounded-full ${columnHeaderStyles[status].icon} mr-2`}></div>
 					<span className="font-medium text-sm">{statusDisplayNames[status]}</span>
-					<span className="ml-2 text-xs bg-gray-100 px-1.5 rounded-full">
-						{tasks.length}
-					</span>
+					<span className="ml-2 text-xs bg-gray-100 px-1.5 rounded-full">{tasks.length}</span>
 				</div>
 				<button
 					className="p-1 rounded hover:bg-gray-100"
-					onClick={() => setIsAddingTask(true)}>
+					onClick={() => setIsAddingTask(true)}
+				>
 					<Plus className="w-4 h-4 text-gray-500" />
 				</button>
 			</div>
@@ -688,7 +680,8 @@ const Column: React.FC<ColumnProps> = ({ status, tasks }) => {
 				className="flex-grow p-2 overflow-y-auto"
 				onDragOver={handleDragOver}
 				onDragLeave={handleDragLeave}
-				onDrop={handleDrop}>
+				onDrop={handleDrop}
+			>
 				{tasks.map((task) => (
 					<TaskCard key={task.id} task={task} />
 				))}
@@ -716,12 +709,14 @@ const Column: React.FC<ColumnProps> = ({ status, tasks }) => {
 								onClick={() => {
 									setIsAddingTask(false);
 									setNewTaskName('');
-								}}>
+								}}
+							>
 								Cancel
 							</button>
 							<button
 								className="px-2 py-1 text-xs bg-violet-600 text-white rounded hover:bg-violet-700"
-								onClick={handleAddTask}>
+								onClick={handleAddTask}
+							>
 								Add Task
 							</button>
 						</div>
@@ -733,7 +728,8 @@ const Column: React.FC<ColumnProps> = ({ status, tasks }) => {
 						<p className="text-sm mb-2">No tasks</p>
 						<button
 							className="text-xs px-2 py-1 text-violet-600 border border-violet-300 rounded hover:bg-violet-50"
-							onClick={() => setIsAddingTask(true)}>
+							onClick={() => setIsAddingTask(true)}
+						>
 							+ Add task
 						</button>
 					</div>
@@ -745,13 +741,26 @@ const Column: React.FC<ColumnProps> = ({ status, tasks }) => {
 
 const TaskManagementBoard = () => {
 	const { tasks } = useTaskStore();
+	const route = useRouter();
 
-	const mainTasks = tasks.filter((task) => !task.parentId);
+	useEffect(() => {
+		const authenticated = localStorage.getItem('authenticated');
+		if (!authenticated || authenticated === 'false') {
+			route.push('/login');
+		}
+	}, [route]);
+
+	const logoutHandler = () => {
+		localStorage.removeItem('authenticated');
+		route.push('/login');
+	};
+
+	const mainTasks = tasks.filter(task => !task.parentId);
 
 	const tasksByStatus = {
-		'TO DO': mainTasks.filter((task) => task.status === 'TO DO'),
-		'IN PROGRESS': mainTasks.filter((task) => task.status === 'IN PROGRESS'),
-		COMPLETE: mainTasks.filter((task) => task.status === 'COMPLETE'),
+		'TO DO': mainTasks.filter(task => task.status === 'TO DO'),
+		'IN PROGRESS': mainTasks.filter(task => task.status === 'IN PROGRESS'),
+		'COMPLETE': mainTasks.filter(task => task.status === 'COMPLETE'),
 	};
 
 	return (
@@ -811,6 +820,14 @@ const TaskManagementBoard = () => {
 						className="border-none outline-none text-sm w-48"
 					/>
 				</div>
+
+				<div>
+					<button
+						onClick={logoutHandler}
+						className="text-xs text-white px-4 py-2 rounded-full bg-red-500 hover:bg-red-600">
+						Logout
+					</button>
+				</div>
 			</div>
 
 			<div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-grow p-4">
@@ -818,7 +835,7 @@ const TaskManagementBoard = () => {
 				<Column status="IN PROGRESS" tasks={tasksByStatus['IN PROGRESS']} />
 				<Column status="COMPLETE" tasks={tasksByStatus['COMPLETE']} />
 			</div>
-		</div>
+		</div >
 	);
 };
 

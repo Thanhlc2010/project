@@ -1,7 +1,6 @@
-import { ChevronRight, MoreHorizontal, Plus, Trash } from 'lucide-react';
+import { ChevronRight, MoreHorizontal, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { toast } from 'sonner';
 
 import CreateListDialog from '../CreateListDialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
@@ -13,9 +12,9 @@ import {
 } from '../ui/dropdown-menu';
 import { SidebarMenuButton, SidebarMenuItem, SidebarMenuSub } from '../ui/sidebar';
 import SpaceTree from './SpaceTree';
-import { Workspace } from '@/common/types';
+import { Space } from '@/common/types';
 import { useActiveItem } from '@/hooks/useActiveItem';
-import { useWorkspaceStore } from '@/store/workspaceStore';
+import { useSpaceStore } from '@/store/spaceStore';
 
 /**
  * Generates an abbreviation from a space name
@@ -33,21 +32,20 @@ const getSpaceAbbreviation = (name: string): string => {
 };
 
 type SpaceNavProps = {
-	workspace: Workspace;
+	space: Space;
 };
 
-const SpacesNav = ({ workspace }: SpaceNavProps) => {
+const SpacesNav = ({ space }: SpaceNavProps) => {
 	const router = useRouter();
 	const { isActive: isSpaceActive, shouldExpandItem: shouldExpandSpace } = useActiveItem(
-		workspace.id,
+		space.id,
 	);
-	const addProject = useWorkspaceStore((state) => state.addProject);
-	const deleteWorkspace = useWorkspaceStore((state) => state.deleteWorkspace);
+	const addList = useSpaceStore((state) => state.addList);
 	const [isSpaceExpanding, setIsSpaceExpanding] = useState(false);
 	const [isCreateListDialogOpen, setIsCreateListDialogOpen] = useState(false);
-	const [isDeleteSpaceDialogOpen, setIsDeleteSpaceDialogOpen] = useState(false);
+
 	const goToSpace = () => {
-		router.push(`/dashboard/s/${workspace.id}`);
+		router.push(`/dashboard/s/${space.id}`);
 	};
 
 	const handleCreateListClick = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -55,33 +53,14 @@ const SpacesNav = ({ workspace }: SpaceNavProps) => {
 		setIsCreateListDialogOpen(true);
 	};
 
-	const handleCreateListConfirm = async (listName: string) => {
-		const newProjectId = await addProject(workspace.id, listName);
-		router.push(`/dashboard/l/${newProjectId}`);
+	const handleCreateListConfirm = (listName: string) => {
+		const newListId = addList(space.id, listName);
+		router.push(`/dashboard/l/${newListId}`);
 		setIsCreateListDialogOpen(false);
 	};
 
 	const handleToggleSpace = (event: React.MouseEvent<HTMLButtonElement>) => {
 		event.stopPropagation();
-	};
-
-	const handleClickDeleteSpace = (event: React.MouseEvent<HTMLDivElement>) => {
-		event.stopPropagation();
-		setIsDeleteSpaceDialogOpen(true);
-
-		setTimeout(() => {
-			handleDeleteSpace();
-		}, 300);
-	};
-
-	const handleDeleteSpace = async () => {
-		try {
-			await deleteWorkspace(workspace.id);
-			setIsDeleteSpaceDialogOpen(false);
-			toast.success('Workspace deleted successfully');
-		} catch (error) {
-			console.error('Error deleting space:', error);
-		}
 	};
 
 	return (
@@ -95,7 +74,7 @@ const SpacesNav = ({ workspace }: SpaceNavProps) => {
 				<DropdownMenu>
 					<SidebarMenuItem>
 						<SidebarMenuButton
-							tooltip={workspace.name}
+							tooltip={space.name}
 							className="[&>svg:first-child]:hidden [&:hover>svg:first-child]:block [&:hover>div.name]:hidden"
 							onClick={goToSpace}
 							isActive={isSpaceActive}>
@@ -103,9 +82,9 @@ const SpacesNav = ({ workspace }: SpaceNavProps) => {
 								<ChevronRight className="transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
 							</CollapsibleTrigger>
 							<div className="name flex h-5 w-5 items-center justify-center rounded text-xs font-medium bg-sidebar-accent text-sidebar-accent-foreground">
-								{getSpaceAbbreviation(workspace.name)}
+								{getSpaceAbbreviation(space.name)}
 							</div>
-							<span>{workspace.name}</span>
+							<span>{space.name}</span>
 							<DropdownMenuTrigger asChild>
 								<MoreHorizontal className="ml-auto" />
 							</DropdownMenuTrigger>
@@ -116,20 +95,14 @@ const SpacesNav = ({ workspace }: SpaceNavProps) => {
 										List
 									</div>
 								</DropdownMenuItem>
-								<DropdownMenuItem asChild onClick={handleClickDeleteSpace}>
-									<div className="flex gap-2 text-red-500">
-										<Trash className="h-4 w-4" />
-										Delete
-									</div>
-								</DropdownMenuItem>
 							</DropdownMenuContent>
 						</SidebarMenuButton>
 						<CollapsibleContent>
 							<SidebarMenuSub className="m-0 pr-0">
-								{workspace.projects?.map((project) => (
+								{space.items.map((item) => (
 									<SpaceTree
-										key={`space-tree-${workspace.id}-${project.id}`}
-										item={project}
+										key={`space-tree-${space.id}-${item.id}`}
+										item={item}
 									/>
 								))}
 							</SidebarMenuSub>

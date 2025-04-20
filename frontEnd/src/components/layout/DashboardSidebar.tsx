@@ -2,11 +2,9 @@
 
 import { Home, Plus } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
+import { useState } from 'react';
 
 import CreateSpaceDialog from '../CreateSpaceDialog';
-import { NavUser } from './NavUser';
 import SpacesNav from './SpaceNav';
 import { APP_ROUTES } from '@/common/constants';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -14,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import {
 	Sidebar,
 	SidebarContent,
-	SidebarFooter,
 	SidebarGroup,
 	SidebarGroupContent,
 	SidebarGroupLabel,
@@ -25,35 +22,27 @@ import {
 	SidebarRail,
 	SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { useAuthStore } from '@/store/authStore';
-import { useWorkspaceStore } from '@/store/workspaceStore';
+import { useSpaceStore } from '@/store/spaceStore';
 
 export function AppSidebar() {
 	const pathname = usePathname();
 	const router = useRouter();
+	const addSpace = useSpaceStore((state) => state.addSpace);
+	const spaces = useSpaceStore((state) => state.spaces);
 	const [isCreateSpaceDialogOpen, setIsCreateSpaceDialogOpen] = useState(false);
-	const addWorkspace = useWorkspaceStore((state) => state.addWorkspace);
-	const workspaces = useWorkspaceStore((state) => state.workspaces);
-	const getAllWorkspaces = useWorkspaceStore((state) => state.getAllWorkspaces);
-	const user = useAuthStore((state) => state.user);
 
 	const handleCreateSpaceClick = () => {
 		setIsCreateSpaceDialogOpen(true);
 	};
 
-	const handleCreateSpaceConfirm = async (spaceName: string, description?: string) => {
+	const handleCreateSpaceConfirm = (spaceName: string, description?: string) => {
 		try {
-			const newWorkspaceId = await addWorkspace(spaceName, description);
-			router.push(`/dashboard/s/${newWorkspaceId}`);
+			const newSpaceId = addSpace(spaceName);
+			router.push(`/dashboard/s/${newSpaceId}`);
 		} catch (error) {
 			console.error('Error creating space:', error);
-			toast.error('Error creating space');
 		}
 	};
-
-	useEffect(() => {
-		getAllWorkspaces();
-	}, [getAllWorkspaces]);
 
 	return (
 		<>
@@ -107,8 +96,8 @@ export function AppSidebar() {
 						</SidebarGroupLabel>
 						<SidebarGroupContent>
 							<SidebarMenu>
-								{workspaces.map((workspace) => (
-									<SpacesNav key={workspace.id} workspace={workspace} />
+								{spaces.map((space) => (
+									<SpacesNav key={space.id} space={space} />
 								))}
 								<SidebarMenuItem>
 									<SidebarMenuButton asChild onClick={handleCreateSpaceClick}>
@@ -123,9 +112,6 @@ export function AppSidebar() {
 					</SidebarGroup>
 				</SidebarContent>
 				<SidebarRail />
-				<SidebarFooter>
-					<NavUser user={user!} />
-				</SidebarFooter>
 			</Sidebar>
 
 			<CreateSpaceDialog
