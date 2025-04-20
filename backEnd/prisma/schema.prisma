@@ -1,0 +1,250 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String            @id @default(uuid())
+  email           String            @unique
+  password        String
+  name            String?
+  status          Status            @default(ACTIVE)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  createdIssues   Issue[]          @relation("IssueCreator")
+  assignedIssues  Issue[]          @relation("IssueAssignee")
+  comments        Comment[]
+  ownedProjects   Project[]        @relation("ProjectOwner")
+  memberProjects  ProjectMember[]
+  ownedWorkspaces Workspace[]      @relation("WorkspaceOwner")
+  workspaceMembers WorkspaceMember[]
+
+  @@map("users")
+}
+
+model Project {
+  id          String            @id @default(uuid())
+  name        String
+  key         String            @unique
+  description String?           @db.Text
+  status      Status            @default(ACTIVE)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  ownerId     String
+  owner       User              @relation("ProjectOwner", fields: [ownerId], references: [id])
+  members     ProjectMember[]
+  perts       Pert[]
+  issues      Issue[]
+  labels      Label[]
+  workspaceId String?
+  workspace   Workspace?        @relation(fields: [workspaceId], references: [id])
+
+  @@map("projects")
+}
+
+model ProjectMember {
+  id        String    @id @default(uuid())
+  project   Project   @relation(fields: [projectId], references: [id])
+  projectId String
+  user      User      @relation(fields: [userId], references: [id])
+  userId    String
+  status    Status    @default(ACTIVE)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+model Issue {
+  id          String           @id @default(uuid())
+  title       String
+  description String?          @db.Text
+  issueStatus IssueStatus     @default(TODO)
+  priority    Priority        @default(MEDIUM)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  dueDate     DateTime?
+  
+  projectId   String
+  project     Project         @relation(fields: [projectId], references: [id])
+  
+  creatorId   String
+  creator     User            @relation("IssueCreator", fields: [creatorId], references: [id])
+  
+  assigneeId  String?
+  assignee    User?           @relation("IssueAssignee", fields: [assigneeId], references: [id])
+  
+  parentId    String?
+  parent      Issue?          @relation("SubIssues", fields: [parentId], references: [id])
+  subIssues   Issue[]         @relation("SubIssues")
+  
+  comments    Comment[]
+  labels      IssueLabel[]
+  history     IssueHistory[]
+  attachments FileAttachment[]
+
+  @@map("issues")
+}
+
+model IssueHistory {
+  id        String    @id @default(uuid())
+  issueId   String
+  issue     Issue     @relation(fields: [issueId], references: [id])
+  field     String    // The field that was changed (e.g., "status", "priority", "title", etc.)
+  oldValue  String?   @db.Text  // The value before the change
+  newValue  String?   @db.Text  // The value after the change
+  createdAt DateTime  @default(now())
+  updatedBy String    // ID of the user who made the change
+
+  @@map("issue_history")
+}
+
+model FileAttachment {
+  id        String    @id @default(uuid())
+  filename  String
+  filepath  String
+  size      Int      // File size in bytes
+  mimetype  String   // File MIME type
+  issueId   String
+  issue     Issue     @relation(fields: [issueId], references: [id])
+  uploadedAt DateTime @default(now())
+  uploadedBy String   // ID of the user who uploaded the file
+
+  @@map("file_attachments")
+}
+
+model Comment {
+  id        String    @id @default(uuid())
+  content   String    @db.Text
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  
+  issueId   String
+  issue     Issue     @relation(fields: [issueId], references: [id])
+  
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@map("comments")
+}
+
+model Label {
+  id          String        @id @default(uuid())
+  name        String
+  color       String        @default("#FFFFFF")
+  projectId   String
+  project     Project       @relation(fields: [projectId], references: [id])
+  issues      IssueLabel[]
+
+  @@unique([name, projectId])
+  @@map("labels")
+}
+
+model IssueLabel {
+  issue     Issue     @relation(fields: [issueId], references: [id])
+  issueId   String
+  label     Label     @relation(fields: [labelId], references: [id])
+  labelId   String
+  createdAt DateTime  @default(now())
+  status    Status    @default(ACTIVE)
+
+  @@id([issueId, labelId])
+  @@map("issue_labels")
+}
+
+model Workspace {
+  id          String            @id @default(uuid())
+  name        String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  status      Status            @default(ACTIVE)
+  ownerId     String
+  owner       User              @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  projects    Project[]
+  members     WorkspaceMember[]
+
+  @@map("workspaces")
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+}
+
+enum IssueStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+}
+
+enum Priority {
+  LOWEST
+  LOW
+  MEDIUM
+  HIGH
+  HIGHEST
+}
+
+model WorkspaceMember {
+  id          String                @id @default(uuid())
+  workspace   Workspace             @relation(fields: [workspaceId], references: [id])
+  workspaceId String
+  user        User                  @relation(fields: [userId], references: [id])
+  userId      String
+  status      Status                @default(ACTIVE)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@unique([workspaceId, userId])
+  @@map("workspace_members")
+}
+
+model TaskNode {
+  id              String  @id @default(uuid())
+  type            String
+  position_x      Float
+  position_y      Float
+  name            String
+  duration        Float
+  priority        String
+  ES              Float
+  EF              Float
+  LS              Float
+  LF              Float
+  data_position_x Float
+  data_position_y Float
+  dependencies    String
+  pertId        String
+  pert           Pert   @relation(fields: [pertId], references: [id])
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  @@map("task_node")
+
+}
+
+model TaskEdge {
+  id        String   @id @default(uuid())
+  source    String
+  target    String
+  pertId    String
+  pert      Pert    @relation(fields: [pertId], references: [id])
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  @@map("task_edge")
+}
+
+model Pert {
+  id     String     @id @default(uuid())
+  taskNodes TaskNode[]
+  taskEdges TaskEdge[]
+  projectId String
+  project   Project   @relation(fields: [projectId], references: [id])
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+}
