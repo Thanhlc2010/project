@@ -5,6 +5,10 @@ interface Task {
   dependencies: string[];
   priority: 'high' | 'medium' | 'low';
   position?: { x: number; y: number };
+  ES?: number;
+  EF?: number;
+  LS?: number;
+  LF?: number;
 }
 
 interface TaskCardProps {
@@ -16,7 +20,7 @@ export default function TaskCard({ task, isDragging = false }: TaskCardProps) {
   if (!task) return null;
 
   return (
-    <div 
+    <div
       className={`
         bg-white p-4 rounded-lg shadow
         ${isDragging ? 'opacity-50' : ''}
