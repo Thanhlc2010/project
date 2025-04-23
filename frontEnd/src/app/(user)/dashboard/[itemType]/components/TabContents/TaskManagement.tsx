@@ -12,6 +12,14 @@ import {
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import IconButton from '../../../../../component/descriptionButton.jsx';
+import { 
+	Button,
+	Menu,
+	Dropdown,
+	Avatar as AntdAvatar, 
+	Tag
+ } from 'antd';
+
 
 // Define interfaces for our data
 interface User {
@@ -43,7 +51,8 @@ interface TaskRowProps {
 }
 
 interface NewTaskRowProps {
-	status: Task['status'];
+  status: Task['status'];
+  selectedUserIds: string[];
 }
 
 interface StatusDropZoneProps {
@@ -64,6 +73,7 @@ const users: User[] = [
 const TaskManagementUI = () => {
 	const route = useRouter();
 
+	const [selectedAssigneeId, setSelectedAssigneeId] = useState<string | null>(null);
 	const [tasks, setTasks] = useState<Task[]>([
 		{
 			id: 1,
@@ -121,7 +131,7 @@ const TaskManagementUI = () => {
 			status: 'COMPLETE',
 			completed: false,
 			assignees: [users[0]],
-			dueDate: '2023-12-15',
+			dueDate: '2024-12-12',
 			priority: 'High',
 			comments: ['First iteration complete'],
 		},
@@ -132,7 +142,7 @@ const TaskManagementUI = () => {
 			status: 'IN PROGRESS',
 			completed: true,
 			assignees: [users[1]], // Jane Smith
-			dueDate: '2023-12-10',
+			dueDate: '2023-1-10',
 			priority: 'Low',
 			comments: [],
 		},
@@ -143,31 +153,166 @@ const TaskManagementUI = () => {
 			status: 'COMPLETE',
 			completed: true,
 			assignees: [users[0], users[1], users[2]], // Multiple assignees
-			dueDate: '2023-12-05',
+			dueDate: '2025-12-05',
 			priority: 'Normal',
 			comments: ['Needs review', 'Approved'],
 		},
 	]);
+	
+	const [originalTasks, setOriginalTasks] = useState<Task[]>([]); 
+	const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]); 
+	
+
+	useEffect(() => {
+  		if (originalTasks.length === 0 && tasks.length > 0) {
+    		setOriginalTasks(tasks);
+  			}
+			}, [tasks]);
+  
+  	const handleSearchAssignees = (idUser: string) => {
+  // Toggle user selection: add if not selected, remove if already selected
+  const newSelectedIds = selectedUserIds.includes(idUser)
+    ? selectedUserIds.filter(id => id !== idUser)
+    : [...selectedUserIds, idUser];
+
+  setSelectedUserIds(newSelectedIds);
+
+ // If no assignee is selected, reset to show all original tasks
+  if (newSelectedIds.length === 0) {
+    setTasks(originalTasks);
+    return;
+  }
+
+  /// Filter tasks based on selected assignees
+  const filtered = originalTasks
+    .map(task => {
+      
+      const taskMatches = newSelectedIds.every(id =>
+        task.assignees.some(user => user.id === id)
+      );
+
+     
+      const filteredSubtasks = task.subtasks.filter(sub =>
+        newSelectedIds.every(id =>
+          sub.assignees.some(user => user.id === id)
+        )
+      );
+
+	  	// Keep the task if either it or at least one subtask matches
+      if (taskMatches || filteredSubtasks.length > 0) {
+        return {
+          ...task,
+          subtasks: filteredSubtasks // keep matching subtasks
+        };
+      }
+      return null;
+    })
+    .filter(Boolean) as Task[]; // remove null
+
+  // update list view
+  setTasks(filtered.length > 0 ? filtered : []);
+  setIsFilteringUpcoming(false); // reset upcoming filter when assignee changes
+
+};
+
+  
+	const assigneeMenu = users.map((user) => ({
+		key: user.id,
+		label: (
+		  <div className="flex items-center gap-2">
+			{user.avatar ? (
+			  <AntdAvatar size="small" src={user.avatar} />
+			) : (
+			  <AntdAvatar size="small">{user.name[0]}</AntdAvatar>
+			)}
+			<span>{user.name}</span>
+		  </div>
+		),
+		onClick: () => handleSearchAssignees(user.id),
+	  }));
+	  
+	// Filter tasks and subtasks with due dates in the future
+	const [isFilteringUpcoming, setIsFilteringUpcoming] = useState(false);
+
+	const filterUpcomingTasks = () => {
+	const now = new Date();
+
+	if (isFilteringUpcoming) {
+		// Go back to current assignee-filtered view
+		const assigneeFiltered = originalTasks.map(task => {
+			const subtasks = task.subtasks.filter(sub =>
+				selectedUserIds.every(id =>
+					sub.assignees.some(user => user.id === id)
+				)
+			);
+
+			const taskMatches = selectedUserIds.every(id =>
+				task.assignees.some(user => user.id === id)
+			);
+
+			if (taskMatches || subtasks.length > 0) {
+				return { ...task, subtasks };
+			}
+			return null;
+		}).filter(Boolean) as Task[];
+		setTasks(selectedUserIds.length > 0 ? assigneeFiltered : originalTasks);
+		setIsFilteringUpcoming(false);
+		return;
+	}
+
+	// Filter based on upcoming tasks only from current task list
+	const filtered = tasks.map(task => {
+		const subtasks = task.subtasks.filter(sub =>
+			sub.dueDate && new Date(sub.dueDate) > now
+		);
+		const taskDueUpcoming = task.dueDate && new Date(task.dueDate) > now;
+
+		if (taskDueUpcoming || subtasks.length > 0) {
+			return { ...task, subtasks };
+		}
+		return null;
+	}).filter(Boolean) as Task[];
+
+	setTasks(filtered);
+	setIsFilteringUpcoming(true);
+};
 
 	const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
+	const addTask = (
+  status: Task['status'],
+  taskName: string,
+  assigneeIds: string[] = []
+): void => {
+  if (!taskName || taskName.trim() === '') return;
 
-	const addTask = (status: Task['status'], taskName: string): void => {
-		if (!taskName || taskName.trim() === '') return;
+  const newTask: Task = {
+    id: tasks.length + 1,
+    name: taskName,
+    subtasks: [],
+    status,
+    completed: false,
+    assignees: users.filter(u => assigneeIds.includes(u.id)),
+    dueDate: null,
+    priority: 'Normal',
+    comments: [],
+  };
 
-		const newTask: Task = {
-			id: tasks.length + 1,
-			name: taskName,
-			subtasks: [],
-			status: status,
-			completed: false,
-			assignees: [],
-			dueDate: null,
-			priority: 'Normal',
-			comments: [],
-		};
+  const updatedTasks = [...originalTasks, newTask];
 
-		setTasks([...tasks, newTask]);
-	};
+ 
+  setOriginalTasks(updatedTasks);
+
+  if (selectedUserIds.length > 0) {
+   
+    const newIds = [...selectedUserIds];
+    handleSearchAssignees(newIds[newIds.length - 1]); 
+  } else {
+   
+    setTasks(updatedTasks);
+  }
+};
+
+
 
 	const addSubtask = (parentTaskId: number, subtaskName: string): void => {
 		if (!subtaskName.trim()) return;
@@ -238,21 +383,22 @@ const TaskManagementUI = () => {
 		);
 	};
 
-	const assignTaskToUsers = (taskId: number, userIds: string[]): void => {
-		setTasks(
-			tasks.map((task) =>
+		const assignTaskToUsers = (taskId: number, userIds: string[]): void => {
+  		const updatedTasks = tasks.map((task) =>
 				task.id === taskId
 					? {
-						...task,
-						assignees:
-							userIds.length > 0
-								? users.filter((user) => userIds.includes(user.id))
-								: [],
-					}
-					: task,
-			),
-		);
-	};
+         				...task,
+          				assignees: users.filter((user) => userIds.includes(user.id)),
+        				}
+      				: task
+  				);
+
+  		setTasks(updatedTasks);
+
+  		if (selectedUserIds.length === 0 && !isFilteringUpcoming) {
+    	setOriginalTasks(updatedTasks);
+  	}
+};
 
 	const addCommentToTask = (taskId: number, comment: string): void => {
 		if (!comment.trim()) return;
@@ -265,8 +411,16 @@ const TaskManagementUI = () => {
 	};
 
 	const updateDueDate = (taskId: number, date: string): void => {
-		setTasks(tasks.map((task) => (task.id === taskId ? { ...task, dueDate: date } : task)));
-	};
+  	const updatedTasks = tasks.map((task) =>
+   		 task.id === taskId ? { ...task, dueDate: date } : task
+  		);
+
+  			setTasks(updatedTasks);
+
+  			if (selectedUserIds.length === 0 && !isFilteringUpcoming) {
+   				 setOriginalTasks(updatedTasks);
+  			}
+		};
 
 	const countByStatus = (status: Task['status']): number => {
 		return tasks.filter((task) => task.status === status && !task.parentId).length;
@@ -360,7 +514,7 @@ const TaskManagementUI = () => {
 							{assignees.slice(0, 3).map((user) => (
 								<div key={user.id} className="inline-block">
 									<Avatar user={user} size="sm" />
-								</div>
+								</div>	
 							))}
 							{assignees.length > 3 && (
 								<div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium">
@@ -1003,11 +1157,11 @@ const TaskManagementUI = () => {
 		const [localTaskName, setLocalTaskName] = useState<string>('');
 
 		const handleAddTask = (): void => {
-			if (localTaskName.trim() === '') return;
+  		if (localTaskName.trim() === '') return;
 
-			addTask(status, localTaskName);
-			setLocalTaskName('');
-		};
+ 		 addTask(status, localTaskName, selectedUserIds); // <-- pass assignees
+  		setLocalTaskName('');
+			};
 
 		return (
 			<tr className="border-b border-gray-200 hover:bg-gray-50 text-gray-500">
@@ -1185,22 +1339,101 @@ const TaskManagementUI = () => {
 					</svg>
 					Me mode
 				</div>
+				<Dropdown
+  			trigger={['click']} dropdownRender={() => (
+    			<div className="p-2 w-72 bg-white rounded shadow">
+     
+      			<div className="max-h-60 overflow-y-auto border-b pb-2 mb-2">
+       			{users.map((user) => (
+          		<div
+            		key={user.id}
+            		className="flex items-center gap-2 p-2 hover:bg-gray-100 cursor-pointer select-none"
+            		onClick={() => handleSearchAssignees(user.id)}
+          		>
+            <input
+              type="checkbox"
+              checked={selectedUserIds.includes(user.id)}
+              readOnly
+              className="accent-violet-500"
+            />
+            {user.avatar ? (
+              <AntdAvatar src={user.avatar} size="small" />
+            ) : (
+              <AntdAvatar size="small">{user.name[0]}</AntdAvatar>
+            )}
+            <span>{user.name}</span>
+          </div>
+        ))}
+      </div>
 
-				<div className="flex items-center gap-2 text-gray-500 px-3 py-1.5 rounded hover:bg-gray-100 cursor-pointer text-sm">
-					<svg
-						className="w-4 h-4"
-						viewBox="0 0 16 16"
-						fill="none"
-						xmlns="http://www.w3.org/2000/svg">
-						<circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.5" />
-						<path
-							d="M13 14C13 11.2386 10.7614 9 8 9C5.23858 9 3 11.2386 3 14"
-							stroke="currentColor"
-							strokeWidth="1.5"
-						/>
-					</svg>
-					Assignee
-				</div>
+    
+      {selectedUserIds.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {selectedUserIds.map((id) => {
+            const user = users.find((u) => u.id === id);
+            return (
+              <Tag
+                key={id}
+                closable
+                onClose={(e) => {
+                  e.preventDefault();
+                  handleSearchAssignees(id);
+                }}
+                className="flex items-center gap-1"
+              >
+                {user?.avatar ? (
+                  <AntdAvatar src={user.avatar} size="small" />
+                ) : (
+                  <AntdAvatar size="small">{user?.name[0]}</AntdAvatar>
+                )}
+                <span>{user?.name}</span>
+              			 </Tag>
+            		   );
+          			})}
+        			</div>
+      			)}
+    				</div>
+  				)}
+			>
+  					<div className="flex items-center gap-2 text-gray-500 px-3 py-1.5 rounded hover:bg-gray-100 cursor-pointer text-sm select-none ">
+    					<svg
+      						className="w-4 h-4"
+      						viewBox="0 0 16 16"
+      						fill="none"
+      						xmlns="http://www.w3.org/2000/svg"
+    					>
+      						<circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.5" />
+      						<path
+       						 d="M13 14C13 11.2386 10.7614 9 8 9C5.23858 9 3 11.2386 3 14"
+        					stroke="currentColor"
+        					strokeWidth="1.5"
+      					/>
+    					</svg>
+    					Assignee
+  					</div>
+				</Dropdown>	
+			<div
+  				onClick={filterUpcomingTasks}
+  				className="flex items-center gap-2 text-gray-500 px-3 py-1.5 rounded hover:bg-gray-100 cursor-pointer text-sm select-none"
+			>
+ 				<svg
+    				className="w-4 h-4"
+    				viewBox="0 0 16 16"
+    				fill="none"
+    				xmlns="http://www.w3.org/2000/svg"
+  			>
+   				 <path
+      				d="M3 8L7 12L13 4"
+      				stroke="currentColor"
+      				strokeWidth="1.5"
+      				strokeLinecap="round"
+     				strokeLinejoin="round"
+    				/>
+  				</svg>
+  				Upcoming
+			</div>
+	
+				
 
 				<div className="flex items-center gap-2 text-gray-500 px-3 py-1.5 rounded hover:bg-gray-100 cursor-pointer text-sm">
 					<svg
@@ -1293,7 +1526,7 @@ const TaskManagementUI = () => {
 							.map((task) => (
 								<TaskRow key={task.id} task={task} />
 							))}
-						<NewTaskRow status="COMPLETE" />
+						<NewTaskRow status="COMPLETE" selectedUserIds={selectedUserIds} />
 					</tbody>
 				</table>
 			</StatusDropZone>
@@ -1356,7 +1589,7 @@ const TaskManagementUI = () => {
 							.map((task) => (
 								<TaskRow key={task.id} task={task} />
 							))}
-						<NewTaskRow status="IN PROGRESS" />
+						<NewTaskRow status="IN PROGRESS" selectedUserIds={selectedUserIds} />
 					</tbody>
 				</table>
 			</StatusDropZone>
@@ -1405,7 +1638,7 @@ const TaskManagementUI = () => {
 							.map((task) => (
 								<TaskRow key={task.id} task={task} />
 							))}
-						<NewTaskRow status="TO DO" />
+						<NewTaskRow status="TO DO" selectedUserIds={selectedUserIds} />
 					</tbody>
 				</table>
 			</StatusDropZone>
