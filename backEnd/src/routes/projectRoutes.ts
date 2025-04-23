@@ -1,6 +1,7 @@
 import express from 'express';
 import { protect } from '../middleware/auth';
 import { projectService } from '../services/projectService';
+import { UserService } from '../services/userService';
 
 const router = express.Router();
 
@@ -260,6 +261,94 @@ router.post('/:id/members', protect, async (req, res, next) => {
     res.status(200).json({
       status: 'success',
       data: member,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @swagger
+ * /api/projects/{id}/available-users:
+ *   get:
+ *     summary: Get available users not in project with pagination
+ *     tags: [Projects]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: List of available users with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     users:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                           email:
+ *                             type: string
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         total:
+ *                           type: integer
+ *                         page:
+ *                           type: integer
+ *                         pages:
+ *                           type: integer
+ *                         limit:
+ *                           type: integer
+ *       404:
+ *         description: Project not found
+ */
+router.get('/:id/available-users', protect, async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    
+    const result = await UserService.getAvailableProjectUsers(
+      req.params.id,
+      page,
+      limit
+    );
+    
+    res.status(200).json({
+      status: 'success',
+      data: result
     });
   } catch (error) {
     next(error);

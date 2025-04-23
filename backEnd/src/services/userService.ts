@@ -214,4 +214,103 @@ export class UserService {
       message: 'User deleted successfully',
     };
   }
+  // Get all users with pagination (excluding specific users)
+  static async getAllUsersWithPagination(
+    page = 1,
+    limit = 10,
+    excludeUserIds: string[] = []
+  ) {
+    const skip = (page - 1) * limit;
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where: {
+          status: 'ACTIVE',
+          id: {
+            notIn: excludeUserIds
+          }
+        },
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+      prisma.user.count({
+        where: {
+          status: 'ACTIVE',
+          id: {
+            notIn: excludeUserIds
+          }
+        }
+      }),
+    ]);
+
+    return {
+      users,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit),
+        limit,
+      },
+    };
+  }
+
+  // Get available workspace users with pagination
+  static async getAvailableWorkspaceUsers(workspaceId: string, page = 1, limit = 10) {
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      include: {
+        members: {
+          select: {
+            userId: true
+          }
+        }
+      }
+    });
+
+    if (!workspace) {
+      throw new AppError('Workspace not found', 404);
+    }
+
+    // Get IDs of users already in the workspace
+    const existingUserIds = [
+      workspace.ownerId,
+      ...workspace.members.map(member => member.userId)
+    ];
+
+    return this.getAllUsersWithPagination(page, limit, existingUserIds);
+  }
+
+  // Get available project users with pagination
+  static async getAvailableProjectUsers(projectId: string, page = 1, limit = 10) {
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        members: {
+          select: {
+            userId: true
+          }
+        }
+      }
+    });
+
+    if (!project) {
+      throw new AppError('Project not found', 404);
+    }
+
+    // Get IDs of users already in the project
+    const existingUserIds = [
+      project.ownerId,
+      ...project.members.map(member => member.userId)
+    ];
+
+    return this.getAllUsersWithPagination(page, limit, existingUserIds);
+  }
 }
