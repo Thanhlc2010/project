@@ -32,17 +32,17 @@ export type Task = {
 };
 
 export type pertTask = {
-  id: string;
-  name: string;
-  duration: number;
-  dependencies: string[];
-  priority: "high" | "medium" | "low";
-  position?: { x: number; y: number };
-  ES?: number;
-  EF?: number;
-  LS?: number;
-  LF?: number;
-}
+	id: string;
+	name: string;
+	duration: number;
+	dependencies: string[];
+	priority: 'high' | 'medium' | 'low';
+	position?: { x: number; y: number };
+	ES?: number;
+	EF?: number;
+	LS?: number;
+	LF?: number;
+};
 
 export enum WorkspaceStatus {
 	ACTIVE = 'ACTIVE',
@@ -61,7 +61,7 @@ export interface Workspace {
 		email: string;
 		name: string;
 	};
-	members: [];
+	members: User[];
 	projects: Project[];
 }
 
@@ -80,4 +80,45 @@ export interface Project {
 	workspaceId: string;
 	createdAt: string;
 	updatedAt: string;
+}
+
+export interface TaskNode {
+	id: string;
+	pertId: string;
+	pert: Pert;
+	type: string;
+	position_x: number;
+	position_y: number;
+	name: string;
+	duration: number;
+	priority: string;
+	ES: number;
+	EF: number;
+	LS: number;
+	LF: number;
+	data_position_x: number;
+	data_position_y: number;
+	dependencies: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface TaskEdge {
+	id: string;
+	source: string;
+	target: string;
+	pertId: string;
+	pert: Pert;
+	createdAt?: string;
+	updatedAt?: string;
+}
+
+export interface Pert {
+	id: string;
+	projectId: string;
+	taskNodes?: TaskNode[];
+	taskEdges?: TaskEdge[];
+	project?: Project;
+	createdAt?: string;
+	updatedAt?: string;
 }

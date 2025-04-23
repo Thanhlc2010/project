@@ -1,5 +1,14 @@
 import { api } from '../lib/api';
-import { Project, ProjectStatus, Workspace, WorkspaceStatus } from '@/common/types';
+import {
+	Pert,
+	Project,
+	ProjectStatus,
+	TaskEdge,
+	TaskNode,
+	Workspace,
+	WorkspaceStatus,
+	User
+} from '@/common/types';
 
 interface WorkspaceResponse {
 	status: string;
@@ -21,6 +30,35 @@ interface UpdateProjectParams {
 	name?: string;
 	description?: string;
 	status?: ProjectStatus;
+}
+
+interface CreatePertParams {
+	projectId: string;
+	taskNodes?: Pick<
+		TaskNode,
+		'id' | 'name' | 'duration' | 'priority' | 'ES' | 'EF' | 'LS' | 'LF' | 'dependencies'
+	>[];
+	taskEdges?: Pick<TaskEdge, 'source' | 'target'>[];
+}
+
+interface AvailableUsersResponse {
+	status: string;
+	data: {
+	  users: User[]; // Giả sử có type User đã được định nghĩa
+	  totalCount: number;
+	  page: number;
+	  limit: number;
+	}
+  }
+
+  interface AddMembersToWorkspaceResponse {
+	id: string;
+	workspaceId: string;
+	userId: string;
+	status: string;
+	createdAt: string;
+	updatedAt: string;
+	user: User;
 }
 
 export const workspaceService = {
@@ -45,6 +83,24 @@ export const workspaceService = {
 	async retrieveWorkspaceById(workspaceId: string): Promise<Workspace> {
 		return api.get<Workspace>(`/api/workspaces/${workspaceId}`);
 	},
+
+	async addMemberWorkspaceById(
+		workspaceId: string,
+		memberIds: string[]
+	): Promise<{ status: string; data: AddMembersToWorkspaceResponse[] }> {
+		return api.post(`/api/workspaces/${workspaceId}/members`, { memberIds });
+	},
+	
+
+	  async getAvailableUsers(
+		workspaceId: string,
+		page: number = 1,
+		limit: number = 10
+	  ): Promise<AvailableUsersResponse> {
+		return api.get<AvailableUsersResponse>(
+		  `/api/workspaces/${workspaceId}/available-users?page=${page}&limit=${limit}`
+		);
+	  },
 
 	// Update a workspace
 	async updateWorkspace(workspaceId: string, data: UpdateWorkspaceParams): Promise<Workspace> {
@@ -87,6 +143,30 @@ export const workspaceService = {
 	// Retrieve project by id
 	async retrieveProjectById(projectId: string): Promise<Project> {
 		return api.get<Project>(`/api/projects/${projectId}`);
+	},
+
+	// Create new pert
+	async createPert(data: CreatePertParams): Promise<{
+		status: string;
+		data: Pert;
+	}> {
+		return api.post(`/api/perts`, data);
+	},
+
+	// Get pert by project id
+	async retrievePertByProjectId(projectId: string): Promise<{
+		status: string;
+		data: Pert[];
+	}> {
+		return api.get(`/api/perts/project/${projectId}`);
+	},
+
+	// Get pert by id
+	async retrievePertById(pertId: string): Promise<{
+		status: string;
+		data: Pert;
+	}> {
+		return api.get(`/api/perts/${pertId}`);
 	},
 	//#endregion
 };

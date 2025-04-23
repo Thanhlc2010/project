@@ -7,9 +7,11 @@ import { useState } from 'react';
 
 import { AvailableTabs } from '../../types';
 import WorkloadStatusChart from '../WorkloadStatusChart';
+import AddUserDialog from '@/components/CreateMemberDialog';
 import { Task, User } from '@/common/types';
 import CreateListDialog from '@/components/CreateListDialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import {
 	Table,
 	TableBody,
@@ -19,6 +21,8 @@ import {
 	TableRow,
 } from '@/components/ui/table';
 import { useWorkspaceStore } from '@/store/workspaceStore';
+import { useEffect } from 'react';
+
 
 const users: User[] = [
 	{ id: '1', name: 'John Doe', avatar: 'https://randomuser.me/api/portraits/men/1.jpg' },
@@ -39,24 +43,30 @@ export default function WorkspaceDetails({ tab, workspaceId }: WorkspaceDetailsP
 	const [isCreateListDialogOpen, setIsCreateListDialogOpen] = useState(false);
 	const workspaces = useWorkspaceStore((state) => state.workspaces);
 	const addProject = useWorkspaceStore((state) => state.addProject);
+	const getAvailableUsersForWorkspace = useWorkspaceStore((state) => state.getAvailableUsersForWorkspace);
+	const availableUsers = useWorkspaceStore((state) => state.availableUsers);
+	const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
+	const addMembersToWorkspace = useWorkspaceStore((state) => state.addMembersToWorkspace);
 
+	const isFetchingWorkspaces = useWorkspaceStore((state) => state.isFetchingWorkspaces);
 	const workspace = workspaces.find((workspace) => workspace.id === workspaceId);
+
 	const projects = workspace?.projects || [];
 	const hasProjects = projects.length > 0;
 
 	const [tasks, setTasks] = useState<Task[]>([
 		{
-			id: 1,
+			id: '1',
 			name: 'Task 1',
 			subtasks: [
 				{
-					id: 5,
+					id: '5',
 					name: 'Subtask 1.1',
 					subtasks: [],
 					status: 'TO DO',
 					completed: false,
 					assignees: [],
-					dueDate: null,
+					dueDate: undefined,
 					priority: 'Normal',
 					comments: [],
 					parentId: 1,
@@ -65,34 +75,34 @@ export default function WorkspaceDetails({ tab, workspaceId }: WorkspaceDetailsP
 			status: 'TO DO',
 			completed: true,
 			assignees: [],
-			dueDate: null,
+			dueDate: undefined,
 			priority: 'Normal',
 			comments: [],
 		},
 		{
-			id: 2,
+			id: '2',
 			name: 'Task 2',
 			subtasks: [
 				{
-					id: 6,
+					id: '6',
 					name: 'Subtask 2.1',
 					subtasks: [],
 					status: 'COMPLETE',
 					completed: true,
 					assignees: [users[0]],
-					dueDate: null,
+					dueDate: undefined,
 					priority: 'Low',
 					comments: [],
 					parentId: 2,
 				},
 				{
-					id: 7,
+					id: '7',
 					name: 'Subtask 2.2',
 					subtasks: [],
 					status: 'IN PROGRESS',
 					completed: false,
 					assignees: [],
-					dueDate: null,
+					dueDate: undefined,
 					priority: 'Normal',
 					comments: [],
 					parentId: 2,
@@ -106,7 +116,7 @@ export default function WorkspaceDetails({ tab, workspaceId }: WorkspaceDetailsP
 			comments: ['First iteration complete'],
 		},
 		{
-			id: 3,
+			id: '3',
 			name: 'Task 3',
 			subtasks: [],
 			status: 'IN PROGRESS',
@@ -117,7 +127,7 @@ export default function WorkspaceDetails({ tab, workspaceId }: WorkspaceDetailsP
 			comments: [],
 		},
 		{
-			id: 4,
+			id: '4',
 			name: 'Task 4',
 			subtasks: [],
 			status: 'COMPLETE',
@@ -129,8 +139,8 @@ export default function WorkspaceDetails({ tab, workspaceId }: WorkspaceDetailsP
 		},
 	]);
 
-	if (!workspace) {
-		return redirect('/dashboard');
+	if (isFetchingWorkspaces) {
+		return <div>Loading workspaces data...</div>;
 	}
 
 	const handleAddListClick = () => {
@@ -139,17 +149,27 @@ export default function WorkspaceDetails({ tab, workspaceId }: WorkspaceDetailsP
 
 	const handleConfirmAddList = async (listName: string) => {
 		setIsCreateListDialogOpen(false);
-		const newProjectId = await addProject(workspace.id, listName);
-		router.push(`/dashboard/l/${newProjectId}`);
+		if (workspace) {
+			const newProjectId = await addProject(workspace.id, listName);
+			router.push(`/dashboard/l/${newProjectId}`);
+		}
 	};
 
+	useEffect(() => {
+		if (workspaceId) {
+			getAvailableUsersForWorkspace(workspaceId);
+		}
+	}, [workspaceId]);
+
 	return (
-		<div className="container mx-auto p-6">
+		<div className="container mx-auto">
 			{tab === AvailableTabs.OVERVIEW && (
 				<Card>
 					<CardHeader>
-						<CardTitle>{workspace.name || 'Workspace Details'}</CardTitle>
-						<CardDescription>Viewing workspace with ID: {workspace.id}</CardDescription>
+						<CardTitle>{workspace?.name || 'Workspace Details'}</CardTitle>
+						<CardDescription>
+							Viewing workspace with ID: {workspace?.id}
+						</CardDescription>
 					</CardHeader>
 					<CardContent className="bg-gray-50">
 						<div className="mt-8 p-6 rounded-lg">
@@ -233,19 +253,6 @@ export default function WorkspaceDetails({ tab, workspaceId }: WorkspaceDetailsP
 								</Card>
 							</div>
 
-							{/* Folders Section */}
-							{/* <div className="mb-6">
-								<h2 className="text-lg font-medium mb-3">Folders</h2>
-								<Card className="bg-white rounded-lg shadow-sm w-80">
-									<CardContent className="p-3">
-										<div className="flex items-center gap-2 p-2">
-											<Folder size={18} className="text-gray-500" />
-											<span>Projects</span>
-										</div>
-									</CardContent>
-								</Card>
-							</div> */}
-
 							{/* Empty Tasks Section */}
 							<div className="bg-white rounded-lg shadow-sm p-6 mt-8">
 								<h2 className="text-lg font-medium mb-6">Lists</h2>
@@ -258,6 +265,9 @@ export default function WorkspaceDetails({ tab, workspaceId }: WorkspaceDetailsP
 													<TableHead className="w-[100px]">
 														Name
 													</TableHead>
+													<TableHead className="w-[100px]">
+														Progress
+													</TableHead>
 												</TableRow>
 											</TableHeader>
 											<TableBody>
@@ -268,6 +278,12 @@ export default function WorkspaceDetails({ tab, workspaceId }: WorkspaceDetailsP
 																href={`/dashboard/l/${project.id}`}>
 																{project.name}
 															</Link>
+														</TableCell>
+														<TableCell className="font-medium">
+															<div className="flex items-center gap-2">
+																<Progress value={0} />
+																<span>0/0</span>
+															</div>
 														</TableCell>
 													</TableRow>
 												))}
@@ -315,6 +331,60 @@ export default function WorkspaceDetails({ tab, workspaceId }: WorkspaceDetailsP
 								</div>
 							</div>
 
+							{/* Users Section */}
+							<div className="bg-white rounded-lg shadow-sm p-6 mt-8">
+								<h2 className="text-lg font-medium mb-6">Users</h2>
+
+								{availableUsers.loading ? (
+									<p className="text-sm text-gray-500">Loading users...</p>
+								) : (workspace && workspace.members && workspace.members.length > 0) ? (
+									<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+										{workspace.members.map((user) => (
+											<div key={user.id} className="flex items-center gap-4 p-4 border rounded-lg">
+												<img
+													src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}`}
+													alt={user.name}
+													className="w-10 h-10 rounded-full object-cover"
+												/>
+												<span className="text-sm font-medium">{user.name}</span>
+											</div>
+										))}
+									</div>
+								) : (
+									<div className="flex flex-col items-center justify-center py-10">
+										<div className="bg-gray-100 p-4 rounded-full mb-3 relative">
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												width="24"
+												height="24"
+												viewBox="0 0 24 24"
+												fill="none"
+												stroke="currentColor"
+												strokeWidth="2"
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												className="text-indigo-500"
+											>
+												<circle cx="12" cy="12" r="10" />
+												<line x1="12" y1="8" x2="12" y2="16" />
+												<line x1="8" y1="12" x2="16" y2="12" />
+											</svg>
+										</div>
+										<p className="text-sm text-center text-gray-500 mb-4">
+											Add users to start collaborating on this workspace
+										</p>
+										<button
+											className="bg-indigo-500 text-white px-4 py-2 rounded-md text-sm"
+											onClick={() => setIsAddUserDialogOpen(true)}
+										>
+											Add User
+										</button>
+									</div>
+								)}
+							</div>
+
+
+
 							<div className="mt-8">
 								<WorkloadStatusChart tasks={tasks} />
 							</div>
@@ -350,6 +420,14 @@ export default function WorkspaceDetails({ tab, workspaceId }: WorkspaceDetailsP
 				open={isCreateListDialogOpen}
 				setOpen={setIsCreateListDialogOpen}
 				onConfirm={handleConfirmAddList}
+			/>
+
+			<AddUserDialog
+				open={isAddUserDialogOpen}
+				setOpen={setIsAddUserDialogOpen}
+				availableUsers={availableUsers.users}
+				workspaceId={workspaceId}
+				addMembersToWorkspace={addMembersToWorkspace}
 			/>
 		</div>
 	);

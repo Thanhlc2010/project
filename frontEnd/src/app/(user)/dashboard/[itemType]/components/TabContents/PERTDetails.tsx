@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Task } from '@/common/types';
+
+import { Pert, Task } from '@/common/types';
+import { useWorkspaceStore } from '@/store/workspaceStore';
 
 type PertDetailsProps = {
 	id: string;
@@ -8,8 +10,15 @@ type PertDetailsProps = {
 export default function PertDetails({ id }: PertDetailsProps) {
 	const [tasks, setTasks] = useState<Task[]>([]);
 	const [loading, setLoading] = useState(true);
-
+	const [pert, setPert] = useState<Pert | null>(null);
+	const getPertById = useWorkspaceStore((state) => state.getPertById);
+	const getPertByProjectId = useWorkspaceStore((state) => state.getPertByProjectId);
 	useEffect(() => {
+		const fetchPert = async () => {
+			const pert = await getPertById(id);
+			setPert(pert);
+		};
+
 		const fetchTasks = async () => {
 			try {
 				const res = await fetch(`/api/tasks/${id}`);
@@ -22,8 +31,27 @@ export default function PertDetails({ id }: PertDetailsProps) {
 			}
 		};
 
+		fetchPert();
 		fetchTasks();
-	}, [id]);
+	}, [id, getPertById]);
+
+	useEffect(() => {
+		const fetchProjectPert = async (projectId: string) => {
+			try {
+				await getPertByProjectId(projectId);
+			} catch (error) {
+				console.error('Failed to fetch project:', error);
+			}
+		};
+
+		if (pert?.projectId) {
+			fetchProjectPert(pert.projectId);
+		}
+	}, [pert, getPertByProjectId]);
+
+	if (!pert) {
+		return <div className="p-6">Không tìm thấy PERT</div>;
+	}
 
 	if (loading) return <div className="p-6">Đang tải danh sách task...</div>;
 
@@ -36,8 +64,12 @@ export default function PertDetails({ id }: PertDetailsProps) {
 				<div className="space-y-2">
 					{tasks.map((task, index) => (
 						<div key={index} className="p-4 border rounded shadow">
-							<p><strong>Tên:</strong> {task.name}</p>
-							<p><strong>Thời gian:</strong> {task.duration}</p>
+							<p>
+								<strong>Tên:</strong> {task.name}
+							</p>
+							<p>
+								<strong>Thời gian:</strong> {task.duration}
+							</p>
 							{/* Thêm các field khác nếu cần */}
 						</div>
 					))}

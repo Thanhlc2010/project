@@ -305,7 +305,8 @@ const TaskManagementUI = () => {
 	const AssigneeSelector: React.FC<{
 		taskId: number;
 		assignees: User[];
-	}> = ({ taskId, assignees }) => {
+		parentTaskId?: number; // Add optional parentTaskId prop to identify subtasks
+	}> = ({ taskId, assignees, parentTaskId }) => {
 		const [isOpen, setIsOpen] = useState(false);
 		const [searchTerm, setSearchTerm] = useState('');
 		const dropdownRef = useRef<HTMLDivElement>(null);
@@ -330,7 +331,18 @@ const TaskManagementUI = () => {
 				? assignees.filter((user) => user.id !== userId).map((user) => user.id)
 				: [...assignees.map((user) => user.id), userId];
 
-			assignTaskToUsers(taskId, newAssigneeIds);
+			// Use different updating method based on whether it's a subtask or main task
+			if (parentTaskId) {
+				// It's a subtask
+				updateSubtask(parentTaskId, taskId, {
+					assignees: newAssigneeIds.length > 0
+						? users.filter((user) => newAssigneeIds.includes(user.id))
+						: []
+				});
+			} else {
+				// It's a main task
+				assignTaskToUsers(taskId, newAssigneeIds);
+			}
 		};
 
 		// Filter users based on search term
@@ -930,7 +942,7 @@ const TaskManagementUI = () => {
 					)}
 				</td>
 				<td className="px-4 py-3">
-					<AssigneeSelector taskId={subtask.id} assignees={subtask.assignees} />
+					<AssigneeSelector taskId={subtask.id} assignees={subtask.assignees} parentTaskId={parentTaskId} />
 				</td>
 				<td className="px-4 py-3">
 					<div className="relative flex items-center">
