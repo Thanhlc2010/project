@@ -2,6 +2,7 @@ import express from 'express';
 import { protect } from '../middleware/auth';
 import { issueService } from '../services/issueService';
 import { IssueStatus, Priority } from '@prisma/client';
+import { log } from 'console';
 
 const router = express.Router();
 
@@ -54,6 +55,9 @@ const router = express.Router();
  */
 router.post('/', protect, async (req, res, next) => {
   try {
+    console.log("Create Task : ...")
+    console.log(req.body);
+    
     const issue = await issueService.createIssue(req.user.id, {
       title: req.body.title,
       description: req.body.description,

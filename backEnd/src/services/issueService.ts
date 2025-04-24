@@ -46,6 +46,8 @@ export const issueService = {
     }
 
     // If parent issue is specified, verify it exists in the same project
+    console.log("Parent ID : " + data.parentId);
+    
     if (data.parentId) {
       const parentIssue = await prisma.issue.findFirst({
         where: {
