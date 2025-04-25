@@ -361,4 +361,67 @@ export const workspaceService = {
       });
     });
   },
+  async removeMembers(workspaceId: string, userId: string, memberIds: string[]) {
+    const workspace = await prisma.workspace.findFirst({
+      where: {
+        id: workspaceId,
+        ownerId: userId,
+      },
+    });
+
+    if (!workspace) {
+      throw AppError.notFound('Workspace not found or unauthorized');
+    }
+
+    // Get existing active members
+    const existingMembers = await prisma.workspaceMember.findMany({
+      where: {
+        workspaceId,
+        userId: {
+          in: memberIds,
+        },
+        status: Status.ACTIVE,
+      },
+    });
+
+    if (existingMembers.length === 0) {
+      throw AppError.notFound('No active members found');
+    }
+
+    // Perform the update in a transaction
+    return prisma.$transaction(async tx => {
+      // Deactivate all specified members
+      await tx.workspaceMember.updateMany({
+        where: {
+          workspaceId,
+          userId: {
+            in: memberIds,
+          },
+          status: Status.ACTIVE,
+        },
+        data: {
+          status: Status.INACTIVE,
+        },
+      });
+
+      // Return updated members list
+      return tx.workspaceMember.findMany({
+        where: {
+          workspaceId,
+          userId: {
+            in: memberIds,
+          },
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      });
+    });
+  },
 };

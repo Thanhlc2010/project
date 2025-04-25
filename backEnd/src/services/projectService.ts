@@ -314,4 +314,77 @@ export const projectService = {
       },
     });
   },
+  async removeMembers(projectId: string, userId: string, memberIds: string[]) {
+    const project = await prisma.project.findFirst({
+      where: {
+        id: projectId,
+        OR: [
+          { ownerId: userId },
+          {
+            workspace: {
+              ownerId: userId,
+            },
+          },
+        ],
+      },
+      include: {
+        workspace: true,
+      },
+    });
+
+    if (!project) {
+      throw AppError.notFound('Project not found or unauthorized');
+    }
+
+    // Get existing active members
+    const existingMembers = await prisma.projectMember.findMany({
+      where: {
+        projectId,
+        userId: {
+          in: memberIds,
+        },
+        status: Status.ACTIVE,
+      },
+    });
+
+    if (existingMembers.length === 0) {
+      throw AppError.notFound('No active members found');
+    }
+
+    // Perform the update in a transaction
+    return prisma.$transaction(async tx => {
+      // Deactivate all specified members
+      await tx.projectMember.updateMany({
+        where: {
+          projectId,
+          userId: {
+            in: memberIds,
+          },
+          status: Status.ACTIVE,
+        },
+        data: {
+          status: Status.INACTIVE,
+        },
+      });
+
+      // Return updated members list
+      return tx.projectMember.findMany({
+        where: {
+          projectId,
+          userId: {
+            in: memberIds,
+          },
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      });
+    });
+  },
 };

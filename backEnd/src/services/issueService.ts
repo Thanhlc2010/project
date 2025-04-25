@@ -22,6 +22,74 @@ interface UpdateIssueData {
 }
 
 export const issueService = {
+  async getIssuesByWorkspace(userId: string, workspaceId: string, filters: {
+    projectStatus?: Status;
+    issueStatus?: IssueStatus;
+    priority?: Priority;
+  }) {
+    return prisma.issue.findMany({
+      where: {
+        project: {
+          workspaceId,
+          status: filters.projectStatus,
+          OR: [
+            { ownerId: userId },
+            {
+              members: {
+                some: {
+                  userId: userId,
+                  status: Status.ACTIVE
+                }
+              }
+            }
+          ]
+        },
+        ...(filters.issueStatus && { issueStatus: filters.issueStatus }),
+        ...(filters.priority && { priority: filters.priority })
+      },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        assignee: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        project: {
+          select: {
+            id: true,
+            name: true,
+            key: true,
+            status: true
+          }
+        },
+        labels: {
+          include: {
+            label: true
+          }
+        },
+        _count: {
+          select: {
+            comments: true,
+            subIssues: true,
+            attachments: true
+          }
+        }
+      },
+      orderBy: [
+        { priority: 'desc' },
+        { createdAt: 'desc' }
+      ]
+    });
+  },
+
   async createIssue(userId: string, data: CreateIssueData) {
     // Check if user has access to project
     const project = await prisma.project.findFirst({
