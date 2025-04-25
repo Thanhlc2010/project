@@ -369,4 +369,80 @@ router.get('/:id/available-users', protect, async (req, res, next) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/workspaces/{id}/members/remove:
+ *   post:
+ *     summary: Remove multiple members from a workspace
+ *     tags: [Workspaces]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Workspace ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - memberIds
+ *             properties:
+ *               memberIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 description: Array of user IDs to remove
+ *     responses:
+ *       200:
+ *         description: Members removed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       user:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                           email:
+ *                             type: string
+ *       404:
+ *         description: Workspace or members not found
+ */
+router.post('/:id/members/remove', protect, async (req, res, next) => {
+  try {
+    const members = await workspaceService.removeMembers(
+      req.params.id,
+      req.user.id,
+      req.body.memberIds
+    );
+    res.status(200).json({
+      status: 'success',
+      data: members
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
