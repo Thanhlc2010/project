@@ -20,6 +20,11 @@ import {
 	Tag
  } from 'antd';
 
+ import { useParams } from 'next/navigation';
+
+ import { workspaceService } from '@/services/workspaceService';
+ import { useWorkspaceStore } from '@/store/workspaceStore';
+ import { authService } from '@/services/authService';
 
 // Define interfaces for our data
 interface User {
@@ -30,7 +35,7 @@ interface User {
 
 // Modify the Task interface to support nested subtasks
 interface Task {
-	id: number;
+	id?: string;
 	name: string;
 	subtasks: Task[]; // Changed from number to array of Task objects
 	status: 'TO DO' | 'IN PROGRESS' | 'COMPLETE';
@@ -39,7 +44,7 @@ interface Task {
 	dueDate: string | null;
 	priority: 'Low' | 'Normal' | 'High' | 'Urgent';
 	comments: string[];
-	parentId?: number; // Optional parent ID for tracking hierarchy
+	parentId?: string; // Optional parent ID for tracking hierarchy
 	ES?: number;
 	EF?: number;
 	LS?: number;
@@ -70,7 +75,93 @@ const users: User[] = [
 	{ id: '6', name: 'Sarah Brown' },
 ];
 
+const convertIssueToTask = (issue: any): Task => {
+	return {
+		id: issue.id, 
+		name: issue.title,
+		subtasks: [], 
+		status:
+			issue.issueStatus === 'TODO'
+				? 'TO DO'
+				: issue.issueStatus === 'IN_PROGRESS'
+				? 'IN PROGRESS'
+				: issue.issueStatus === 'DONE'
+				? 'COMPLETE'
+				: 'TO DO',
+		completed: issue.issueStatus === 'DONE',
+		assignees: issue.assignee
+			? [
+					{
+						id: issue.assignee.id,
+						name: issue.assignee.name,
+						avatar: '', // nếu có avatar URL thì gán ở đây
+					},
+			  ]
+			: [],
+		dueDate: issue.dueDate || null,
+		priority:
+			issue.priority === 'LOW'
+				? 'Low'
+				: issue.priority === 'MEDIUM'
+				? 'Normal'
+				: issue.priority === 'HIGH'
+				? 'High'
+				: 'Urgent',
+		comments: [], // bạn có thể load riêng nếu muốn
+		parentId: issue.parentId || null,
+		ES: undefined,
+		EF: undefined,
+		LS: undefined,
+		LF: undefined,
+	};
+};
+
+const convertTaskToIssue = (task: Task, assigneeId: string, projectId: string): any => {
+	return {
+		title: task.name,
+		description: '', 
+		assigneeId: assigneeId, 
+		projectId: projectId,
+		priority:
+			task.priority === 'Low'
+				? 'LOW'
+				: task.priority === 'Normal'
+				? 'MEDIUM'
+				: task.priority === 'High'
+				? 'HIGH'
+				: 'HIGHEST',
+		issueStatus:
+			task.status === 'TO DO'
+				? 'TODO'
+				: task.status === 'IN PROGRESS'
+				? 'IN_PROGRESS'
+				: 'DONE', // assume COMPLETE => DONE
+		dueDate: task.dueDate || null,
+		parentId: task.parentId || null,
+	};
+};
+
+function getCookieValue(name: string): string | null {
+	const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+	return match ? decodeURIComponent(match[2]) : null;
+}
+
+function getUser(){
+	const encoded = getCookieValue('userData');
+	if (encoded) {
+		try {
+			const user = JSON.parse(decodeURIComponent(encoded));
+			// console.log("User :", user);
+			return user;			
+		} catch (e) {
+			console.error('Lỗi decode userData:', e);
+		}
+	}
+}
+  
 const TaskManagementUI = () => {
+	const user = getUser();
+	const projectId = useParams().itemId as string;
 	const route = useRouter();
 
 	const [selectedAssigneeId, setSelectedAssigneeId] = useState<string | null>(null);
@@ -161,7 +252,20 @@ const TaskManagementUI = () => {
 	
 	const [originalTasks, setOriginalTasks] = useState<Task[]>([]); 
 	const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]); 
+
+	useEffect(() => {
+		const fetchIssues = async () => {
+			const res = await workspaceService.getIssues({ projectId });
+			if (res.status === 'success') {
+				const converted = (res.data as any[]).map(convertIssueToTask);
+				setTasks(converted);
+			}
+		};
 	
+		if (projectId) {
+			fetchIssues();
+		}
+	}, [projectId]);
 
 	useEffect(() => {
   		if (originalTasks.length === 0 && tasks.length > 0) {
@@ -286,16 +390,20 @@ const TaskManagementUI = () => {
   if (!taskName || taskName.trim() === '') return;
 
   const newTask: Task = {
-    id: tasks.length + 1,
+    // id: tasks.length + 1, 
     name: taskName,
     subtasks: [],
     status,
     completed: false,
-    assignees: users.filter(u => assigneeIds.includes(u.id)),
+    assignees: user.id,
     dueDate: null,
     priority: 'Normal',
     comments: [],
   };
+  // Create task in BE 
+  const newIssue = convertTaskToIssue(newTask, user.id, projectId);
+  workspaceService.createIssue(user.id, newIssue); 
+
 
   const updatedTasks = [...originalTasks, newTask];
 
@@ -331,6 +439,10 @@ const TaskManagementUI = () => {
 			comments: [],
 			parentId: parentTaskId,
 		};
+
+		// Add sub task in BE 
+		const newSubIssue = convertTaskToIssue(newSubtask, user.id, projectId);
+  		workspaceService.createIssue(user.id, newSubIssue); 
 
 		setTasks(
 			tasks.map((task) =>
@@ -378,6 +490,7 @@ const TaskManagementUI = () => {
 	};
 
 	const updateTaskPriority = (taskId: number, newPriority: Task['priority']): void => {
+
 		setTasks(
 			tasks.map((task) => (task.id === taskId ? { ...task, priority: newPriority } : task)),
 		);
@@ -1157,11 +1270,11 @@ const TaskManagementUI = () => {
 		const [localTaskName, setLocalTaskName] = useState<string>('');
 
 		const handleAddTask = (): void => {
-  		if (localTaskName.trim() === '') return;
+			if (localTaskName.trim() === '') return;
 
- 		 addTask(status, localTaskName, selectedUserIds); // <-- pass assignees
-  		setLocalTaskName('');
-			};
+			addTask(status, localTaskName, selectedUserIds); // <-- pass assignees
+			setLocalTaskName('');
+		};
 
 		return (
 			<tr className="border-b border-gray-200 hover:bg-gray-50 text-gray-500">

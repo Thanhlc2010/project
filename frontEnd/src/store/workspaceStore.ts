@@ -285,4 +285,28 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 		}
 		throw new Error('Failed to get pert by id');
 	},
+
+	// getIssuesByProject: async (projectId: Str) => {
+	// 	// set({ isFetchingIssues: true });
+	
+	// 	try {
+	// 	  const res = await issueService.getIssues(filters);
+	
+	// 	  if (res.status === 'success' && Array.isArray(res.data)) {
+	// 		set((state) => ({
+	// 		  issuesByProject: {
+	// 			...state.issuesByProject,
+	// 			[filters.projectId]: res.data as Task[],
+	// 		  },
+	// 		  isFetchingIssues: false,
+	// 		}));
+	// 	  } else {
+	// 		throw new Error('Invalid response from server');
+	// 	  }
+	// 	} catch (err) {
+	// 	  console.error('Failed to fetch issues:', err);
+	// 	  set({ isFetchingIssues: false });
+	// 	}
+	//   },
 }));
+

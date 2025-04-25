@@ -10,6 +10,8 @@ import {
 	User
 } from '@/common/types';
 
+import { Task } from '@/common/types';
+
 interface WorkspaceResponse {
 	status: string;
 	data: Workspace[];
@@ -60,6 +62,11 @@ interface AvailableUsersResponse {
 	updatedAt: string;
 	user: User;
 }
+
+interface IssueResponse {
+	status: string;
+	data: Task | Task[];
+  }
 
 export const workspaceService = {
 	//#region Workspace
@@ -168,5 +175,63 @@ export const workspaceService = {
 	}> {
 		return api.get(`/api/perts/${pertId}`);
 	},
-	//#endregion
+
+	//#region Issue
+	// ✅ GET all issues with optional filters
+	async getIssues(filters?: {
+		projectId?: string;
+		assigneeId?: string;
+		status?: string;
+		priority?: string;
+	}): Promise<IssueResponse> {
+		const params = new URLSearchParams();
+		if (filters?.projectId) params.append('projectId', filters.projectId);
+		if (filters?.assigneeId) params.append('assigneeId', filters.assigneeId);
+
+		const query = params.toString();
+		const url = query ? `/api/issues?${query}` : `/api/issues`;
+
+		const response = await api.get<IssueResponse>(url);
+		return response;
+	},
+
+	// ✅ GET issue by ID
+	async getIssueById(id: string): Promise<IssueResponse> {
+		const response = await api.get<IssueResponse>(`/api/issues/${id}`);
+		return response;
+	},
+
+	// ✅ POST: Create new issue
+	async createIssue(userId: string, data: Partial<Task>): Promise<IssueResponse> {
+		console.log("Da goi");
+		
+		console.log("DATA", data);
+		
+		const response = await api.post<IssueResponse>('/api/issues', data);
+		return response;
+	},
+
+	// ✅ PUT: Update issue by ID
+	async updateIssue(id: string, data: Partial<Task>): Promise<IssueResponse> {
+		const response = await api.put<IssueResponse>(`/api/issues/${id}`, data);
+		return response;
+	},
+
+	// ✅ DELETE: Remove issue
+	async deleteIssue(id: string): Promise<{ status: string }> {
+		const response = await api.delete<{ status: string }>(`/api/issues/${id}`);
+		return response;
+	},
+
+	// ✅ POST: Add comment to issue
+	async addComment(issueId: string, content: string): Promise<IssueResponse> {
+		const response = await api.post<IssueResponse>(`/api/issues/${issueId}/comments`, { content });
+		return response;
+	},
+
+	// ✅ POST: Add label to issue
+	async addLabel(issueId: string, labelId: string): Promise<IssueResponse> {
+		const response = await api.post<IssueResponse>(`/api/issues/${issueId}/labels`, { labelId });
+		return response;
+	}
 };
