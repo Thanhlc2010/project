@@ -1,5 +1,6 @@
 "use client";
 
+import { RemoveFormatting, Trash } from "lucide-react";
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Handle, Position } from "reactflow";
 
@@ -23,6 +24,7 @@ interface TaskNodeProps {
     allTasks: Task[];
     onCreateConnection: (sourceId: string, targetId: string) => void;
     onDeleteConnection: (sourceId: string, targetId: string) => void;
+    onDeleteTask: (taskId: string) => void;
   };
 }
 
@@ -92,10 +94,17 @@ const TaskNode = ({ data }: TaskNodeProps) => {
       return `${baseStyle} bg-gray-100 border-blue-500`;
     }
   };
+  const handleDeleteNode = () => {
+    if (window.confirm('Do u want delete this task')) {
+      console.log(data.id);
+      data.onDeleteTask(data.id);
+    }
+  };
 
   return (
     <div className="relative">
       <div ref={nodeRef} onClick={handleNodeClick}>
+
         {data.type == "task" && (
           <div className={getNodeStyle()}>
             <table className="table-fixed border-collapse border border-black text-sm font-semibold">
@@ -126,6 +135,10 @@ const TaskNode = ({ data }: TaskNodeProps) => {
           ref={modalRef}
           className="absolute left-full top-0 ml-2 bg-white text-black p-3 rounded shadow-lg border border-gray-200 z-10 w-48"
         >
+          {data.type !== "start" && data.type !== "end" && (
+            <button className="absolute top-2 right-2" onClick={() => handleDeleteNode()}><Trash color="red" size={15} /></button>
+
+          )}
           <div className="font-bold mb-2 text-sm">Kết nối đến:</div>
           {data.allTasks
             .filter((task) => task.id !== data.id && task.type !== "start")

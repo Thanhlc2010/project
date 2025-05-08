@@ -11,6 +11,10 @@ type NavHeaderProps = {
 };
 
 export default function NavHeader({ activeTab, setActiveTab, availableTabs }: NavHeaderProps) {
+	if (availableTabs.length === 0) {
+		return null;
+	}
+
 	return (
 		<div className="border-b">
 			<div className="flex items-center justify-between px-4 h-14">

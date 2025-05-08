@@ -3,6 +3,7 @@ import jwt, { SignOptions } from 'jsonwebtoken';
 import { AppError } from '../utils/AppError';
 import { environment } from '../config/environment';
 import { prisma } from '../utils/prismaClient';
+import { Status } from '@prisma/client';
 
 interface RegisterInput {
   email: string;
@@ -268,6 +269,9 @@ export class UserService {
       where: { id: workspaceId },
       include: {
         members: {
+          where: {
+            status: Status.ACTIVE,
+          },
           select: {
             userId: true
           }
@@ -294,6 +298,9 @@ export class UserService {
       where: { id: projectId },
       include: {
         members: {
+          where: {
+            status: Status.ACTIVE,
+          },
           select: {
             userId: true
           }
