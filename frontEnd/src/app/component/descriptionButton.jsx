@@ -1,10 +1,10 @@
 // components/IconButton.jsx
 import { useState, useEffect, useRef } from 'react';
 
-export default function IconButton({ onClick }) {
+export default function IconButton({ onSaveDescription, taskDescription }) {
   const [showPopup, setShowPopup] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState(taskDescription);
   const popupRef = useRef(null);
   const iconRef = useRef(null);
   const timeoutRef = useRef(null);
@@ -121,6 +121,16 @@ export default function IconButton({ onClick }) {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
+            <button
+              className="mt-2 px-4 py-1 bg-blue-500 text-white rounded"
+              onClick={() => {
+                onSaveDescription(description); 
+                setShowPopup(false); 
+                setIsEditing(false);
+              }}
+            >
+              Save
+            </button>
           </div>
         </div>
       )}

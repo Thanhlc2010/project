@@ -36,8 +36,6 @@ interface UpdateProjectParams {
 
 interface CreatePertParams {
 	projectId: string;
-	name:string;
-	tasks: { issueId: string; parentIssueId?: string }[];
 	taskNodes?: Pick<
 		TaskNode,
 		'id' | 'name' | 'duration' | 'priority' | 'ES' | 'EF' | 'LS' | 'LF' | 'dependencies'
@@ -53,9 +51,9 @@ interface AvailableUsersResponse {
 	  page: number;
 	  limit: number;
 	}
-  }
+}
 
-  interface AddMembersToWorkspaceResponse {
+interface AddMembersToWorkspaceResponse {
 	id: string;
 	workspaceId: string;
 	userId: string;
@@ -67,16 +65,17 @@ interface AvailableUsersResponse {
 
 interface Comment {
 	commentId: string,
+	comment: string,
 }
 
 interface IssueResponse {
 	status: string;
-	data: Comment | Comment[];
+	data: Task | Task[];
 }
 
-interface ComentResponse {
+interface CommentResponse {
 	status: string;
-	data: Task | Task[];
+	data: Comment | Comment[];
 }
 
 interface AddIssueResponse {
@@ -107,6 +106,13 @@ export const workspaceService = {
 		return api.get<Workspace>(`/api/workspaces/${workspaceId}`);
 	},
 
+	async getMembersByWorkspaceId(workspaceId: string): Promise<{
+		status: string,
+		data: User[],
+	}>{
+		return api.get(`/api/workspaces/${workspaceId}/allMembers`);
+	},
+
 	async addMemberWorkspaceById(
 		workspaceId: string,
 		memberIds: string[]
@@ -115,15 +121,15 @@ export const workspaceService = {
 	},
 	
 
-	  async getAvailableUsers(
+	async getAvailableUsers(
 		workspaceId: string,
 		page: number = 1,
 		limit: number = 10
-	  ): Promise<AvailableUsersResponse> {
+	): Promise<AvailableUsersResponse> {
 		return api.get<AvailableUsersResponse>(
-		  `/api/workspaces/${workspaceId}/available-users?page=${page}&limit=${limit}`
+			`/api/workspaces/${workspaceId}/available-users?page=${page}&limit=${limit}`
 		);
-	  },
+	},
 
 	// Update a workspace
 	async updateWorkspace(workspaceId: string, data: UpdateWorkspaceParams): Promise<Workspace> {
@@ -137,6 +143,14 @@ export const workspaceService = {
 	//#endregion
 
 	//#region Project
+
+	// Get project by id 
+	async getProjectById(projectId: string): Promise<{
+		status: string;
+		data: Project;
+	}> {
+		return api.get(`/api/projects/${projectId}/get`);
+	},
 	// Create new project
 	async createProject(data: CreateProjectParams): Promise<{
 		status: string;
@@ -168,9 +182,22 @@ export const workspaceService = {
 		return api.get<Project>(`/api/projects/${projectId}`);
 	},
 
-	//#endregion
+	// Check user in project
+	async checkExistMemberInProject(projectId: string, memberId: string): Promise<{
+		status: string;
+		data: User;
+	}> {
+		return api.post(`/api/projects/checkMemberExist/${projectId}`, {memberId: memberId});
+	},
 
-	//#region Pert
+	// Add member to project
+	async addMemberToProject(projectId: string, memberId: string): Promise<{
+		status: string;
+		data: User;
+	}> {
+		return api.post(`/api/projects/${projectId}/members`, {userId: memberId});
+	},
+
 	// Create new pert
 	async createPert(data: CreatePertParams): Promise<{
 		status: string;
@@ -244,7 +271,7 @@ export const workspaceService = {
 		commentId?: string;
 		issueId?: string;
 		userId?: string;
-	}): Promise<ComentResponse> {
+	}): Promise<CommentResponse> {
 		const params = new URLSearchParams();
 		if (filters?.commentId) params.append('commentId', filters.commentId);
 		if (filters?.issueId) params.append('issueId', filters.issueId);
@@ -254,7 +281,7 @@ export const workspaceService = {
 		const query = params.toString();
 		const url = query ? `/api/issues/comments/?${query}` : `/api/issues/comments`;
 
-		const response = await api.get<ComentResponse>(`/api/issues/${filters?.issueId}/comments`);
+		const response = await api.get<CommentResponse>(`/api/issues/${filters?.issueId}/comments`);
 		return response;
 	},
 	// ✅ POST: Add comment to issue

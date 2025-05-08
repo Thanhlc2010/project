@@ -94,6 +94,8 @@ export const issueService = {
     // Check if user has access to project
     console.log("Create issue", data);
     
+    console.log("Create issue", data);
+    
     const project = await prisma.project.findFirst({
       where: {
         id: data.projectId,
@@ -381,6 +383,8 @@ export const issueService = {
     });
   
     // ✅ Remove `issueId` because Prisma will infer it from context
+  
+    // ✅ Remove `issueId` because Prisma will infer it from context
     return prisma.$transaction(async (prisma) => {
       const updatedIssue = await prisma.issue.update({
         where: { id: issueId },
@@ -420,6 +424,7 @@ export const issueService = {
       return updatedIssue;
     });
   },
+  
   
 
   async addComment(issueId: string, userId: string, content: string) {
@@ -461,6 +466,27 @@ export const issueService = {
           }
         }
       }
+    });
+  },
+  
+  async getComments(userId: string, { userId: filterUserId, issueId, commentId }: {
+    userId?: string;
+    issueId?: string;
+    commentId?: string;
+  }) {
+    const whereClause: any = {
+      ...(filterUserId && { userId: filterUserId }),
+      ...(issueId && { issueId }),
+      ...(commentId && { id: commentId }),
+    };
+  
+    return prisma.comment.findMany({
+      where: whereClause,
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        issue: { select: { id: true, title: true } },
+      },
+      orderBy: { createdAt: 'desc' },
     });
   },
   

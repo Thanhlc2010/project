@@ -8,6 +8,7 @@ import {
 	MoreHorizontal,
 	Plus,
 	Trash2,
+	User,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -23,10 +24,8 @@ import {
 import { useParams } from 'next/navigation';
 
 import { workspaceService } from '@/services/workspaceService';
-import AddTaskToPertDialog from '@/components/AddTaskToPertDialog'
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import { authService } from '@/services/authService';
-import { Pert } from '@/common/types.jsx';
 
 // Define interfaces for our data
 interface User {
@@ -39,6 +38,7 @@ interface User {
 interface Task {
 	id: string;
 	name: string;
+	description?: string;
 	subtasks: Task[]; // Changed from number to array of Task objects
 	status: 'TO DO' | 'IN PROGRESS' | 'COMPLETE';
 	completed: boolean;
@@ -67,21 +67,23 @@ interface StatusDropZoneProps {
 	children: React.ReactNode;
 }
 
-// @audit : set to useState 
-// Sample users
-const users: User[] = [
-	{ id: '1', name: 'John Doe', avatar: 'https://randomuser.me/api/portraits/men/1.jpg' },
-	{ id: '2', name: 'Jane Smith', avatar: 'https://randomuser.me/api/portraits/women/1.jpg' },
-	{ id: '3', name: 'Alex Johnson' },
-	{ id: '4', name: 'Maria Garcia' },
-	{ id: '5', name: 'David Kim' },
-	{ id: '6', name: 'Sarah Brown' },
-];
+const convertDateFormat = (isoDate: string) : string => {
+	if(!isoDate) return '';
+	const dateObj = new Date(isoDate);
+
+	const yyyy = dateObj.getFullYear();
+	const dd = String(dateObj.getDate()).padStart(2, '0');
+	const mm = String(dateObj.getMonth() + 1).padStart(2, '0'); // Tháng bắt đầu từ 0
+
+	const formatted = `${yyyy}-${mm}-${dd}`;
+	return formatted;
+}
 
 const convertIssueToTask = (issue: any): Task => {
 	return {
 		id: issue.id, 
 		name: issue.title,
+		description: issue.description || '',
 		subtasks: [], 
 		status:
 			issue.issueStatus === 'TODO'
@@ -101,7 +103,7 @@ const convertIssueToTask = (issue: any): Task => {
 					},
 			  ]
 			: [],
-		dueDate: issue.dueDate || null,
+		dueDate: convertDateFormat(issue.dueDate),
 		priority:
 			issue.priority === 'LOW'
 				? 'Low'
@@ -119,11 +121,12 @@ const convertIssueToTask = (issue: any): Task => {
 	};
 };
 
+// @audit : assignee có thể sửa nhiều người 
 const convertTaskToIssue = (task: Task, assigneeId: string, projectId: string): any => {
 	return {
 		title: task.name,
-		description: '', 
-		assigneeId: assigneeId, 
+		description: task.description || '', 
+		assigneeId: task.assignees[0].id, 
 		projectId: projectId,
 		priority:
 			task.priority === 'Low'
@@ -164,7 +167,17 @@ function getUser(){
   
 const TaskManagementUI = () => {
 	const user = getUser();
+
+	const [users, setUsers] = useState<User[]>([
+		{ id: '1', name: 'John Doe', avatar: 'https://randomuser.me/api/portraits/men/1.jpg' },
+		{ id: '2', name: 'Jane Smith', avatar: 'https://randomuser.me/api/portraits/women/1.jpg' },
+		{ id: '3', name: 'Huy' },
+		{ id: '4', name: 'Maria Garcia' },
+		{ id: '5', name: 'David Kim' },
+		{ id: '6', name: 'Sarah Brown' },
+	])
 	const projectId = useParams().itemId as string;
+	const [workspaceId, setWorkspaceId] = useState(''); 
 	const route = useRouter();
 
 	const [selectedAssigneeId, setSelectedAssigneeId] = useState<string | null>(null);
@@ -257,44 +270,12 @@ const TaskManagementUI = () => {
 	const [originalTasks, setOriginalTasks] = useState<Task[]>([]); 
 	const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]); 
 	const [reloadCounter, setReloadCounter] = useState(0);
-	const [openPertDialog, setOpenPertDialog] = useState(false);
-	const [listPert, setListPert] = useState<Pert[]>([]);
 
-	//workspace api
-	const fetchPertListByProjectId = useWorkspaceStore((state) => state.fetchPertListByProjectId);
-
-	//Add task to pert
-	const fakePertList = [
-		{
-			id: "1",
-			name: "PERT Chart 1",
-			projectId: "Project A"
-		},
-		{
-			id: "2",
-			name: "PERT Chart 2",
-			projectId:"Project B" 
-		}
-	];
-
-	const handleOpenPertDialog = async () => {
-		try {
-			const pertList = await fetchPertListByProjectId(projectId);
-			setListPert(pertList);
-			setOpenPertDialog(true);
-		} catch (error) {
-			console.error("Failed to fetch pert list:", error);
-		}
-	};
-
-	const handleConfirmPert = (pertId: string) => {
-		console.log("Task added to PERT with ID:", pertId);
-	};
-
+	// GET ALL TASK 
 	useEffect(() => {
-		const fetchIssues = async () => {
+		const fetchIssues = async () => {			
 			const resIssues = await workspaceService.getIssues({ projectId });
-	
+
 			if (resIssues.status === 'success') {
 				const allIssues = resIssues.data as any[];
 	
@@ -343,8 +324,39 @@ const TaskManagementUI = () => {
 	
 		if (projectId) fetchIssues();
 	}, [projectId, reloadCounter]);
-	
-	
+
+	// GET WORKSPACE ID 
+	useEffect(() => {
+		const fetchProject = async () => {
+			const resProject = await workspaceService.getProjectById(projectId);
+			if (resProject.status === 'success') {
+				setWorkspaceId(resProject.data.workspaceId);
+				console.log("✅ Workspace ID:", resProject.data.workspaceId);
+			}
+		};
+		if (projectId) fetchProject();
+	}, [projectId]);
+
+	// GET ALL USER IN PROJECT
+	// @audit : Problem : assignee not in project member
+	useEffect(() => {
+		const fetchUsers = async () => {
+			if (!workspaceId) return;
+
+			const resUsers = await workspaceService.getMembersByWorkspaceId(workspaceId);
+			console.log("👥 Users of workspace:", resUsers.data);
+
+			const userList: User[] = resUsers.data.map((member: any) => ({
+				id: member.user.id,
+				name: member.user.name,
+				avatar: '', 
+			}));
+			setUsers(userList);
+		};
+		fetchUsers();
+	}, [workspaceId]);
+
+
 	useEffect(() => {
 		if (originalTasks.length === 0 && tasks.length > 0) {
 			setOriginalTasks(tasks);
@@ -394,7 +406,6 @@ const TaskManagementUI = () => {
 		// update list view
 		setTasks(filtered.length > 0 ? filtered : []);
 		setIsFilteringUpcoming(false); // reset upcoming filter when assignee changes
-
 	};
 
   
@@ -474,7 +485,7 @@ const TaskManagementUI = () => {
 			subtasks: [],
 			status,
 			completed: false,
-			assignees: [user.id],
+			assignees: [user],
 			dueDate: null,
 			priority: 'Normal',
 			comments: [],
@@ -502,7 +513,7 @@ const TaskManagementUI = () => {
 		}
 	};
 
-	const addSubtask = async (parentTaskId: string, subtaskName: string): Promise<void> => {
+	const addSubtask = async (parentTaskId: string, subtaskName: string): void => {
 		if (!subtaskName.trim()) return;
 
 		// const newId = Math.max(...tasks.flatMap((t) => [t.id, ...t.subtasks.map((s) => s.id)])) + 1;
@@ -513,7 +524,7 @@ const TaskManagementUI = () => {
 			subtasks: [],
 			status: 'TO DO',
 			completed: false,
-			assignees: [],
+			assignees: [user],
 			dueDate: null,
 			priority: 'Normal',
 			comments: [],
@@ -539,21 +550,43 @@ const TaskManagementUI = () => {
 	const updateSubtask = (
 		parentTaskId: string,
 		subtaskId: string,
-		updates: Partial<Task>,
-	): void => {
-		setTasks(
-			tasks.map((task) =>
-				task.id === parentTaskId
-					? {
-						...task,
-						subtasks: task.subtasks.map((subtask) =>
-							subtask.id === subtaskId ? { ...subtask, ...updates } : subtask,
-						),
-					}
-					: task,
-			),
+		updates: Partial<Task>
+	  ): void => {
+		const parentTask = tasks.find(task => task.id === parentTaskId);
+		if (!parentTask) {
+		  console.warn(`Không tìm thấy task cha với id = ${parentTaskId}`);
+		  return;
+		}
+	  
+		const targetSubtask = parentTask.subtasks.find(sub => sub.id === subtaskId);
+		if (!targetSubtask) {
+		  console.warn(`Không tìm thấy subtask với id = ${subtaskId}`);
+		  return;
+		}
+	  
+		const updatedSubtask = { ...targetSubtask, ...updates };
+	  
+		// Gửi update lên backend
+		workspaceService.updateIssue(
+		  subtaskId,
+		  convertTaskToIssue(updatedSubtask, user.id, projectId)
 		);
+	  
+		// Cập nhật lại danh sách tasks trong state
+		const updatedTasks = tasks.map(task =>
+		  task.id === parentTaskId
+			? {
+				...task,
+				subtasks: task.subtasks.map(sub =>
+				  sub.id === subtaskId ? updatedSubtask : sub
+				),
+			  }
+			: task
+		);
+	  
+		setTasks(updatedTasks);
 	};
+	  
 
 	// @incomplete : Dont have delete API 
 	const deleteSubtask = (parentTaskId: string, subtaskId: string): void => {
@@ -635,18 +668,45 @@ const TaskManagementUI = () => {
 		}
 	};
 
-	// @incomplete
-	const assignTaskToUsers = (taskId: string, userIds: string[]): void => {
-  		const updatedTasks = tasks.map((task) =>
-			task.id === taskId
-				? {
-					...task,
-					assignees: users.filter((user) => userIds.includes(user.id)),
-					}
-				: task
+	// @audit Hiện đang chỉ gán assignee cho 1 user
+	const assignTaskToUsers = async (taskId: string, userIds: string[]): void => {
+  		console.log("UserIDS ", userIds);
+		const newestUserId = userIds[userIds.length - 1];
+		
+		// const updatedTasks = tasks.map((task) =>
+		// 	task.id === taskId
+		// 		? {
+		// 			...task,
+		// 			assignees: users.filter((user) => userIds.includes(user.id)),
+		// 			}
+		// 		: task
+		// );
+
+		const targetTask = tasks.find((task) => task.id === taskId);
+		if (!targetTask) {
+			console.warn(`Không tìm thấy task với id = ${taskId}`);
+			return;
+		}
+
+		// Update target task
+		const updatedTask = {
+			...targetTask,
+			assignees: users.filter((user) => user.id == newestUserId),
+		};
+		
+		const updatedTasks = tasks.map((task) =>
+			task.id === taskId ? updatedTask : task
 		);
 
   		setTasks(updatedTasks);
+
+		const resCheckExist = await workspaceService.checkExistMemberInProject(projectId, newestUserId);
+		console.log("Check exist", resCheckExist.data);
+		if(!resCheckExist.data){
+			await workspaceService.addMemberToProject(projectId, newestUserId);
+		}
+		
+		await workspaceService.updateIssue(taskId, convertTaskToIssue(updatedTask, user.id, projectId));
 
   		if (selectedUserIds.length === 0 && !isFilteringUpcoming) {
 			setOriginalTasks(updatedTasks);
@@ -663,8 +723,6 @@ const TaskManagementUI = () => {
 			),
 		);
 	};
-
-	
 
 	const countByStatus = (status: Task['status']): number => {
 		return tasks.filter((task) => task.status === status && !task.parentId).length;
@@ -700,6 +758,7 @@ const TaskManagementUI = () => {
 		);
 	};
 
+	// @audit 
 	const AssigneeSelector: React.FC<{
 		taskId: string;
 		assignees: User[];
@@ -893,6 +952,7 @@ const TaskManagementUI = () => {
 			</div>
 		);
 	};
+
 	const PrioritySelector: React.FC<{
 		taskId: string;
 		priority: Task['priority'];
@@ -943,6 +1003,8 @@ const TaskManagementUI = () => {
 
 		const handleNameSave = (): void => {
 			if (editedName.trim() !== '') {
+				const updatedTask = { ...task, name: editedName };
+				workspaceService.updateIssue(updatedTask.id, convertTaskToIssue(updatedTask, user.id, projectId));
 				setTasks(tasks.map((t) => (t.id === task.id ? { ...t, name: editedName } : t)));
 			} else {
 				setEditedName(task.name);
@@ -1048,15 +1110,22 @@ const TaskManagementUI = () => {
 									)}
 
 									<span
-										className={
-											task.completed ? 'line-through text-gray-500' : ''
-										}>
+										// className={
+										// 	task.completed ? 'line-through text-gray-500' : ''
+										// }
+									>
 										{task.name}
 									</span>
 
 								</div>
 								<div className="pl-2">
-									<IconButton onClick={() => { }} />
+									{/* <IconButton onClick={() => { }} /> */}
+									<IconButton onSaveDescription={(description: string) => {
+										console.log("Description từ component:", description);
+										
+										task.description = description;
+										workspaceService.updateIssue(task.id, convertTaskToIssue(task, user.id, projectId));	
+									}} taskDescription={task.description || ''}  />
 								</div>
 
 								<div className="ml-auto flex items-center">
@@ -1133,10 +1202,7 @@ const TaskManagementUI = () => {
 					</td>
 					<td className="px-4 py-3">
 						<div className="flex justify-center">
-							<MoreHorizontal
-								className="w-4 h-4 text-gray-500 cursor-pointer"
-								onClick={handleOpenPertDialog}
-							/>
+							<MoreHorizontal className="w-4 h-4 text-gray-500 cursor-pointer" />
 						</div>
 					</td>
 					<td className="px-4 py-3">
@@ -1255,6 +1321,7 @@ const TaskManagementUI = () => {
 			</>
 		);
 	};
+
 	const SubtaskRow: React.FC<{
 		parentTaskId: string;
 		subtask: Task;
@@ -1400,6 +1467,7 @@ const TaskManagementUI = () => {
 			</tr>
 		);
 	};
+
 	const NewTaskRow: React.FC<NewTaskRowProps> = ({ status }) => {
 		const [localTaskName, setLocalTaskName] = useState<string>('');
 
@@ -1889,12 +1957,6 @@ const TaskManagementUI = () => {
 					</tbody>
 				</table>
 			</StatusDropZone>
-			<AddTaskToPertDialog
-				open={openPertDialog}
-				setOpen={setOpenPertDialog}
-				onConfirm={(pertId) => console.log("Added to", pertId)}
-				listPert={listPert}
-			/>
 		</div>
 	);
 };

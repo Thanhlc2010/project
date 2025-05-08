@@ -106,6 +106,7 @@ router.post('/', protect, async (req, res, next) => {
  *           enum: [LOWEST, LOW, MEDIUM, HIGH, HIGHEST]
  *         description: Filter issues by priority
  *      
+ *      
  *     responses:
  *       200:
  *         description: List of issues
@@ -284,8 +285,7 @@ router.post('/:id/comments', protect, async (req, res, next) => {
 
 router.get('/:issueId/comments', protect, async (req, res, next) => {
   try {
-    console.log("URL : ", req.params);
-    
+    // console.log("URL : ", req.params);    
     const comments = await issueService.getComments(req.user.id, {
       // userId: req.query.userId as string,
       issueId: req.params.issueId,
