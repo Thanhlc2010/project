@@ -10,6 +10,8 @@ import {
 	User
 } from '@/common/types';
 
+import { Task } from '@/common/types';
+
 interface WorkspaceResponse {
 	status: string;
 	data: Workspace[];
@@ -34,6 +36,8 @@ interface UpdateProjectParams {
 
 interface CreatePertParams {
 	projectId: string;
+	name:string;
+	tasks: { issueId: string; parentIssueId?: string }[];
 	taskNodes?: Pick<
 		TaskNode,
 		'id' | 'name' | 'duration' | 'priority' | 'ES' | 'EF' | 'LS' | 'LF' | 'dependencies'
@@ -59,6 +63,25 @@ interface AvailableUsersResponse {
 	createdAt: string;
 	updatedAt: string;
 	user: User;
+}
+
+interface Comment {
+	commentId: string,
+}
+
+interface IssueResponse {
+	status: string;
+	data: Comment | Comment[];
+}
+
+interface ComentResponse {
+	status: string;
+	data: Task | Task[];
+}
+
+interface AddIssueResponse {
+	status: string;
+	data: Task;
 }
 
 export const workspaceService = {
@@ -145,6 +168,9 @@ export const workspaceService = {
 		return api.get<Project>(`/api/projects/${projectId}`);
 	},
 
+	//#endregion
+
+	//#region Pert
 	// Create new pert
 	async createPert(data: CreatePertParams): Promise<{
 		status: string;
@@ -168,5 +194,78 @@ export const workspaceService = {
 	}> {
 		return api.get(`/api/perts/${pertId}`);
 	},
-	//#endregion
+
+	//#region Issue
+	// ✅ GET all issues with optional filters
+	async getIssues(filters?: {
+		projectId?: string;
+		assigneeId?: string;
+		status?: string;
+		priority?: string;
+		parentId?: string;
+	}): Promise<IssueResponse> {
+		const params = new URLSearchParams();
+		if (filters?.projectId) params.append('projectId', filters.projectId);
+		if (filters?.assigneeId) params.append('assigneeId', filters.assigneeId);
+		if (filters?.parentId) params.append('parentId', filters.parentId);
+
+		const query = params.toString();
+		const url = query ? `/api/issues?${query}` : `/api/issues`;
+
+		const response = await api.get<IssueResponse>(url);
+		return response;
+	},
+
+	// ✅ GET issue by ID
+	async getIssueById(id: string): Promise<Comment> {
+		const response = await api.get<Comment>(`/api/issues/${id}`);
+		return response;
+	},
+
+	// ✅ POST: Create new issue
+	async createIssue(data: Partial<Task>): Promise<AddIssueResponse> {		
+		const response = await api.post<AddIssueResponse>('/api/issues', data);
+		return response;
+	},
+
+	// ✅ PUT: Update issue by ID
+	async updateIssue(id: string, data: Partial<Task>): Promise<IssueResponse> {
+		const response = await api.put<IssueResponse>(`/api/issues/${id}`, data);
+		return response;
+	},
+
+	// ✅ DELETE: Remove issue
+	async deleteIssue(id: string): Promise<{ status: string }> {
+		const response = await api.delete<{ status: string }>(`/api/issues/${id}`);
+		return response;
+	},
+
+	async getComments(filters?: {
+		commentId?: string;
+		issueId?: string;
+		userId?: string;
+	}): Promise<ComentResponse> {
+		const params = new URLSearchParams();
+		if (filters?.commentId) params.append('commentId', filters.commentId);
+		if (filters?.issueId) params.append('issueId', filters.issueId);
+		if (filters?.userId) params.append('userId', filters.userId);
+
+
+		const query = params.toString();
+		const url = query ? `/api/issues/comments/?${query}` : `/api/issues/comments`;
+
+		const response = await api.get<ComentResponse>(`/api/issues/${filters?.issueId}/comments`);
+		return response;
+	},
+	// ✅ POST: Add comment to issue
+	async addComment(issueId: string, content: string): Promise<IssueResponse> {
+		const response = await api.post<IssueResponse>(`/api/issues/${issueId}/comments`, { content });
+		return response;
+	},
+
+	// ✅ POST: Add label to issue
+	async addLabel(issueId: string, labelId: string): Promise<IssueResponse> {
+		const response = await api.post<IssueResponse>(`/api/issues/${issueId}/labels`, { labelId });
+		return response;
+	}
 };

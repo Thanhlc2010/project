@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import PertDiagram from '../../components/PERTComponents/PertDiagram';
 import TaskCard from '../../components/PERTComponents/TaskCard';
 import TaskList from '../../components/PERTComponents/TaskList';
-import { pertTask } from '@/common/types'
+import { pertTask, TaskEdge, TaskNode } from '@/common/types'
 
 
 interface Edge {
@@ -18,7 +18,15 @@ interface Edge {
   style?: any;
 }
 
-export default function Home() {
+export default function Home({
+  tasks: initialTasks = [],
+  initialEdges = [],
+  initialNodes = [],
+}: {  
+  tasks?: pertTask[];
+  initialEdges?: TaskEdge[];
+  initialNodes?: TaskNode[];
+}){
 
   const [tasks, setTasks] = useState<pertTask[]>([]);
   const [pertTasks, setPertTasks] = useState<pertTask[]>([]);
@@ -28,16 +36,20 @@ export default function Home() {
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
 
   useEffect(() => {
-    const loadTasks = async () => {
-      const module = await import("../../../../../../mocks/PERTData.json");
-      const loadedTasks = module.default.map((task: any) => ({
-        ...task,
-        priority: task.priority as "high" | "medium" | "low",
-      }));
-      setTasks(loadedTasks);
-    };
-    loadTasks();
-  }, []);
+    if (initialTasks.length > 0) {
+      setTasks(initialTasks);
+    } else {
+      const loadTasks = async () => {
+        const module = await import("../../../../../../mocks/PERTData.json");
+        const loadedTasks = module.default.map((task: any) => ({
+          ...task,
+          priority: task.priority as "high" | "medium" | "low",
+        }));
+        setTasks(loadedTasks);
+      };
+      loadTasks();
+    }
+  }, [initialTasks]);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
@@ -63,10 +75,8 @@ export default function Home() {
           x: (event.activatorEvent instanceof MouseEvent ? event.activatorEvent.clientX : 0) + offsetX,
           y: (event.activatorEvent instanceof MouseEvent ? event.activatorEvent.clientY : 0) + offsetY,
         });
-        // console.log("Screen:", event.delta.x, event.delta.y);
-        // console.log("Flow:", position.x, position.y);
 
-        console.log("before ",pertTasks);
+        console.log("before ", pertTasks);
         setPertTasks([
           ...pertTasks,
           {
@@ -74,7 +84,7 @@ export default function Home() {
             position: { x: position.x, y: position.y },
           },
         ]);
-        console.log("after ",pertTasks);
+        console.log("after ", pertTasks);
 
 
         const updatedTasks = tasks.filter((task) => task.id !== draggedTask.id);
@@ -82,7 +92,9 @@ export default function Home() {
       }
     }
   };
-
+  const getCurrentTask = () => {
+    return tasks;
+  }
   const onEdgesChange = (newEdges: Edge[]) => {
     setEdges(newEdges);
   };
@@ -110,7 +122,9 @@ export default function Home() {
             edges={edges}
             onEdgesChange={onEdgesChange}
             onInit={onInit}
+            onGetCurrentTask={getCurrentTask}
             onTasksChange={setPertTasks}
+            onSetCurrentTask={setTasks}
           />
         </div>
 

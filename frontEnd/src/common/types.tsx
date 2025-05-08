@@ -7,6 +7,7 @@ export enum SpaceItemType {
 export type User = {
 	id: string;
 	name: string;
+	email: string;
 	avatar?: string; // Optional avatar URL
 };
 
@@ -61,7 +62,15 @@ export interface Workspace {
 		email: string;
 		name: string;
 	};
-	members: User[];
+	members: {
+		id: string;
+		user: {
+			id: string;
+			name: string;
+			email: string;
+			avatar?: string;
+		};
+	}[];
 	projects: Project[];
 }
 
@@ -115,10 +124,46 @@ export interface TaskEdge {
 
 export interface Pert {
 	id: string;
+	name: string;
 	projectId: string;
-	taskNodes?: TaskNode[];
-	taskEdges?: TaskEdge[];
-	project?: Project;
-	createdAt?: string;
-	updatedAt?: string;
+	createdAt: string;
+	updatedAt: string;
+	pertTasks: PertTask[];
 }
+
+export interface PertTask {
+	id: string;
+	issueId: string;
+	parentIssueId: string | null;
+	pertId: string;
+	createdAt: string;
+	updatedAt: string;
+	position_x: number;
+	position_y: number;
+	ES: number;
+	EF: number;
+	LS: number;
+	LF: number;
+	data_position_x: number;
+	data_position_y: number;
+	dependencies: string;
+	issue: Issue;
+	parentIssue: Issue | null;
+}
+
+export interface Issue {
+	id: string;
+	title: string;
+	description: string;
+	issueStatus: 'TODO' | 'IN_PROGRESS' | 'DONE';
+	priority: 'LOW' | 'MEDIUM' | 'HIGH';
+	duration: number | null;
+	createdAt: string;
+	updatedAt: string;
+	dueDate: string | null;
+	projectId: string;
+	creatorId: string;
+	assigneeId: string;
+	parentId: string | null;
+}
+

@@ -5,58 +5,108 @@ import { pertService } from '../services/pertService';
 const router = express.Router();
 
 /**
-* @swagger
-* /api/perts:
-*   post:
-*     summary: Create a new Pert
-*     tags: [Perts]
-*     security:
-*       - bearerAuth: []
-*     requestBody:
-*       required: true
-*       content:
-*         application/json:
-*           schema:
-*             type: object
-*             required:
-*               - taskNodes
-*               - taskEdges
-*             properties:
-*               taskNodes:
-*                 type: array
-*                 items:
-*                   $ref: '#/components/schemas/TaskNode'
-*               taskEdges:
-*                 type: array
-*                 items:
-*                   $ref: '#/components/schemas/TaskEdge'
-*           example:
-*             taskNodes:
-*               - type: "string"
-*                 position_x: 0
-*                 position_y: 0
-*                 name: "string"
-*                 duration: 0
-*                 priority: "string"
-*                 ES: 0
-*                 EF: 0
-*                 LS: 0
-*                 LF: 0
-*                 data_position_x: 0
-*                 data_position_y: 0
-*                 dependencies: "string"
-*             taskEdges:
-*               - source: "954fec03-3260-45d4-99d1-42e9e786333e"
-*                 target: "eaaec6c3-8389-4769-8ac5-42dad08a3cf1"
-*             projectId: "string"
-*     responses:
-*       201:
-*         description: Pert created successfully
-*         content:
-*           application/json:
-*             schema:
-*               $ref: '#/components/schemas/Pert'
-*/
+ * @swagger
+ * /api/perts:
+ *   post:
+ *     summary: Create a new Pert
+ *     tags: [Perts]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - projectId
+ *               - name
+ *               - tasks
+ *             properties:
+ *               projectId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: ID of the project the Pert belongs to
+ *               name:
+ *                 type: string
+ *                 description: Name of the Pert
+ *               tasks:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - issueId
+ *                   properties:
+ *                     issueId:
+ *                       type: string
+ *                       format: uuid
+ *                       description: ID of the issue
+ *                     parentIssueId:
+ *                       type: string
+ *                       format: uuid
+ *                       description: ID of the parent issue (optional)
+ *                     position_x:
+ *                       type: number
+ *                       format: float
+ *                       description: X position of the task
+ *                     position_y:
+ *                       type: number
+ *                       format: float
+ *                       description: Y position of the task
+ *                     ES:
+ *                       type: number
+ *                       format: float
+ *                       description: Earliest Start time
+ *                     EF:
+ *                       type: number
+ *                       format: float
+ *                       description: Earliest Finish time
+ *                     LS:
+ *                       type: number
+ *                       format: float
+ *                       description: Latest Start time
+ *                     LF:
+ *                       type: number
+ *                       format: float
+ *                       description: Latest Finish time
+ *                     data_position_x:
+ *                       type: number
+ *                       format: float
+ *                       description: Data X position
+ *                     data_position_y:
+ *                       type: number
+ *                       format: float
+ *                       description: Data Y position
+ *                     dependencies:
+ *                       type: string
+ *                       description: Task dependencies
+ *           example:
+ *             projectId: "123e4567-e89b-12d3-a456-426614174000"
+ *             name: "Project Timeline"
+ *             tasks:
+ *               - issueId: "954fec03-3260-45d4-99d1-42e9e786333e"
+ *               - issueId: "eaaec6c3-8389-4769-8ac5-42dad08a3cf1"
+ *                 parentIssueId: "954fec03-3260-45d4-99d1-42e9e786333e"
+ *     responses:
+ *       201:
+ *         description: Pert created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   $ref: '#/components/schemas/Pert'
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.post('/', protect, async (req, res, next) => {
     try {
         const pert = await pertService.createPert(req.body);
@@ -79,7 +129,7 @@ router.post('/', protect, async (req, res, next) => {
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: List of Perts
+ *         description: List of Perts with their tasks
  *         content:
  *           application/json:
  *             schema:
@@ -116,7 +166,7 @@ router.get('/', protect, async (req, res, next) => {
  *           format: uuid
  *     responses:
  *       200:
- *         description: Pert details
+ *         description: Pert details with its tasks
  *         content:
  *           application/json:
  *             schema:
@@ -158,14 +208,54 @@ router.get('/:id', protect, async (req, res, next) => {
  *           schema:
  *             type: object
  *             properties:
- *               taskNodes:
+ *               name:
+ *                 type: string
+ *                 description: New name for the Pert
+ *               tasks:
  *                 type: array
  *                 items:
- *                   $ref: '#/components/schemas/TaskNode'
- *               taskEdges:
- *                 type: array
- *                 items:
- *                   $ref: '#/components/schemas/TaskEdge'
+ *                   type: object
+ *                   required:
+ *                     - issueId
+ *                   properties:
+ *                     issueId:
+ *                       type: string
+ *                       format: uuid
+ *                     parentIssueId:
+ *                       type: string
+ *                       format: uuid
+ *                     position_x:
+ *                       type: number
+ *                       format: float
+ *                     position_y:
+ *                       type: number
+ *                       format: float
+ *                     ES:
+ *                       type: number
+ *                       format: float
+ *                     EF:
+ *                       type: number
+ *                       format: float
+ *                     LS:
+ *                       type: number
+ *                       format: float
+ *                     LF:
+ *                       type: number
+ *                       format: float
+ *                     data_position_x:
+ *                       type: number
+ *                       format: float
+ *                     data_position_y:
+ *                       type: number
+ *                       format: float
+ *                     dependencies:
+ *                       type: string
+ *           example:
+ *             name: "Updated Timeline"
+ *             tasks:
+ *               - issueId: "954fec03-3260-45d4-99d1-42e9e786333e"
+ *               - issueId: "eaaec6c3-8389-4769-8ac5-42dad08a3cf1"
+ *                 parentIssueId: "954fec03-3260-45d4-99d1-42e9e786333e"
  *     responses:
  *       200:
  *         description: Pert updated successfully
@@ -192,7 +282,7 @@ router.put('/:id', protect, async (req, res, next) => {
  * @swagger
  * /api/perts/{id}:
  *   delete:
- *     summary: Delete a Pert
+ *     summary: Delete a Pert and its tasks
  *     tags: [Perts]
  *     security:
  *       - bearerAuth: []
@@ -205,7 +295,7 @@ router.put('/:id', protect, async (req, res, next) => {
  *           format: uuid
  *     responses:
  *       200:
- *         description: Pert deleted successfully
+ *         description: Pert and its tasks deleted successfully
  *       404:
  *         description: Pert not found
  */
@@ -214,12 +304,13 @@ router.delete('/:id', protect, async (req, res, next) => {
         await pertService.deletePert(req.params.id);
         res.status(200).json({
             status: 'success',
-            message: 'Pert deleted successfully',
+            message: 'Pert and its tasks deleted successfully',
         });
     } catch (error) {
         next(error);
     }
 });
+
 /**
  * @swagger
  * /api/perts/project/{projectId}:
@@ -237,7 +328,7 @@ router.delete('/:id', protect, async (req, res, next) => {
  *           format: uuid
  *     responses:
  *       200:
- *         description: List of Perts for the specified project
+ *         description: List of Perts with their tasks for the specified project
  *         content:
  *           application/json:
  *             schema:
@@ -258,4 +349,5 @@ router.get('/project/:projectId', protect, async (req, res, next) => {
         next(error);
     }
 });
+
 export default router;

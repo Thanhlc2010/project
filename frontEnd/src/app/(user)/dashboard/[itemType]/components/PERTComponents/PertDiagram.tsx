@@ -4,6 +4,9 @@ import { useDroppable } from "@dnd-kit/core";
 import PertCanvas from "./PertCanvas";
 import React, { memo, useRef } from "react";
 import { PertCanvasRef } from "@/mocks/PertCanvasRef";
+import { pertTask } from "@/common/types";
+import { TaskEdge, TaskNode } from '@/common/types'
+
 
 interface Task {
   id: string;
@@ -41,11 +44,7 @@ interface CriticalPathNode {
   [key: string]: any;
 }
 
-type CriticalPath = CriticalPathNode[];
-// interface PertCanvasRef {
-//   exportToJSON: () => { nodes: any[]; edges: Edge[]; metadata: any };
-//   importFromJSON: (data: any) => void;
-// }
+
 interface PertDiagramProps {
   tasks: Task[];
   edges: Edge[];
@@ -54,10 +53,14 @@ interface PertDiagramProps {
   createConnectionRef?: (sourceId: string, targetId: string) => void;
   deleteConnectionRef?: (sourceId: string, targetId: string) => void;
   onInit?: (instance: any) => void;
+  onGetCurrentTask: () => pertTask[];
+  onSetCurrentTask: (task: pertTask[]) => void;
+  initialNodes?: TaskNode[];
+  initialEdges?: TaskEdge[]
 }
 
 const PertDiagram = memo(
-  ({ tasks, edges, onEdgesChange, onTasksChange, onInit, createConnectionRef, deleteConnectionRef }: PertDiagramProps) => {
+  ({ tasks, edges, onEdgesChange, onTasksChange, onGetCurrentTask, onSetCurrentTask, onInit, createConnectionRef, deleteConnectionRef }: PertDiagramProps) => {
     const { setNodeRef } = useDroppable({
       id: "pert-drop-area",
     });
@@ -328,8 +331,20 @@ const PertDiagram = memo(
         console.log("Canvas ref not available");
         return;
       }
+
       const exportData = canvasRef.current.exportToJSON();
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+
+      const currentTasks = typeof onGetCurrentTask === 'function'
+        ? onGetCurrentTask()
+        : [];
+      const combinedData = {
+        ...exportData,
+        listTask: currentTasks,
+      };
+      const blob = new Blob([JSON.stringify(combinedData, null, 2)], {
+        type: "application/json",
+      });
+
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -340,6 +355,7 @@ const PertDiagram = memo(
       URL.revokeObjectURL(url);
     };
 
+
     const handleImportJSON = (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (!file) return;
@@ -348,7 +364,10 @@ const PertDiagram = memo(
       reader.onload = (e) => {
         try {
           const importedData = JSON.parse(e.target?.result as string);
+          debugger;
           if (canvasRef.current) {
+            const tasks = unflattenListTask(importedData.listTask);
+            onSetCurrentTask(tasks);
             canvasRef.current.importFromJSON(importedData);
             console.log("Imported JSON successfully");
           } else {
@@ -359,9 +378,46 @@ const PertDiagram = memo(
         }
       };
       reader.readAsText(file);
-
       event.target.value = "";
     };
+
+    const importFromData = (
+      tasks: Task[],
+      initialEdges: Edge[],
+      initialNodes: Node[]
+    ) => {
+      if (!canvasRef.current) {
+        console.error("Canvas ref not available");
+        return;
+      }
+    
+      try {
+        const importedData = {
+          tasks,
+          nodes: initialNodes,
+          edges: initialEdges,
+          metadata: {}, // hoặc bỏ nếu không cần
+        };
+    
+        // Set lại danh sách task hiện tại (nếu bạn muốn cập nhật UI/State)
+        onSetCurrentTask(tasks);
+    
+        // Gọi vào canvas như đang import từ file
+        canvasRef.current.importFromJSON(importedData);
+        console.log("Imported data successfully from variables");
+      } catch (error) {
+        console.error("Error importing data:", error);
+      }
+    };
+    
+
+    const unflattenListTask = (listTask: pertTask[]) => {
+      const unflattenedTasks = listTask.map((task) => ({
+        ...task,
+        id: task.id.toString(),
+      }));
+      return unflattenedTasks;
+    }
 
     const handleImportClick = () => {
       fileInputRef.current?.click();

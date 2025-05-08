@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 
 import { Pert, Task } from '@/common/types';
 import { useWorkspaceStore } from '@/store/workspaceStore';
+import PERT from './PERT';
+import { convertToPertTasks } from '@/common/utils/convertToPertTask';
+import { convertIssueToTask } from '@/common/utils/convertIssueToTask';
 
 type PertDetailsProps = {
 	id: string;
@@ -15,24 +18,33 @@ export default function PertDetails({ id }: PertDetailsProps) {
 	const getPertByProjectId = useWorkspaceStore((state) => state.getPertByProjectId);
 	useEffect(() => {
 		const fetchPert = async () => {
-			const pert = await getPertById(id);
-			setPert(pert);
-		};
-
-		const fetchTasks = async () => {
 			try {
-				const res = await fetch(`/api/tasks/${id}`);
-				const data = await res.json();
-				setTasks(data);
+				const pertData = await getPertById(id);
+				setPert(pertData);
+				
+				// Extract issues from pertTasks list if available
+				if (pertData && pertData.pertTasks && Array.isArray(pertData.pertTasks)) {
+					const issuesList: Task[] = [];
+					
+					// Loop through each pertTask and extract its issue
+					for (const pertTask of pertData.pertTasks) {
+						if (pertTask.issue) {
+							issuesList.push(convertIssueToTask(pertTask.issue));
+						}
+					}
+					
+					setTasks(issuesList);
+				} else {
+					setTasks([]);
+				}
 			} catch (error) {
-				console.error('Failed to fetch tasks:', error);
+				console.error('Failed to fetch PERT:', error);
 			} finally {
 				setLoading(false);
 			}
 		};
 
 		fetchPert();
-		fetchTasks();
 	}, [id, getPertById]);
 
 	useEffect(() => {
@@ -58,23 +70,10 @@ export default function PertDetails({ id }: PertDetailsProps) {
 	return (
 		<div className="container mx-auto p-6">
 			<p className="text-xl font-bold mb-4">PERT Details</p>
-			{tasks.length === 0 ? (
-				<p>Không có task nào.</p>
-			) : (
-				<div className="space-y-2">
-					{tasks.map((task, index) => (
-						<div key={index} className="p-4 border rounded shadow">
-							<p>
-								<strong>Tên:</strong> {task.name}
-							</p>
-							<p>
-								<strong>Thời gian:</strong> {task.duration}
-							</p>
-							{/* Thêm các field khác nếu cần */}
-						</div>
-					))}
-				</div>
-			)}
+			<PERT tasks={convertToPertTasks(tasks)}
+			// initialEdges={pert.taskEdges}
+			// initialNodes={pert.taskNodes} 
+			/>
 		</div>
 	);
 }

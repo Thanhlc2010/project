@@ -14,6 +14,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { workspaceService } from '@/services/workspaceService';
+import { Task } from '@/common/types';
+import { convertIssueToTask } from '@/common/utils/convertIssueToTask';
 
 // Sample users for assignees
 const users = [
@@ -23,93 +26,93 @@ const users = [
 ];
 
 // Sample tasks list
-const tasksList = [
-	{
-		id: 1,
-		name: 'Task 1',
-		subtasks: [
-			{
-				id: 5,
-				name: 'Subtask 1.1',
-				subtasks: [],
-				status: 'TO DO',
-				completed: false,
-				assignees: [],
-				dueDate: null,
-				priority: 'Normal',
-				comments: [],
-				parentId: 1,
-			},
-		],
-		status: 'TO DO',
-		completed: true,
-		assignees: [],
-		dueDate: null,
-		priority: 'Normal',
-		comments: [],
-	},
-	{
-		id: 2,
-		name: 'Task 2',
-		subtasks: [
-			{
-				id: 6,
-				name: 'Subtask 2.1',
-				subtasks: [],
-				status: 'COMPLETE',
-				completed: true,
-				assignees: [users[0]],
-				dueDate: null,
-				priority: 'Low',
-				comments: [],
-				parentId: 2,
-			},
-			{
-				id: 7,
-				name: 'Subtask 2.2',
-				subtasks: [],
-				status: 'IN PROGRESS',
-				completed: false,
-				assignees: [],
-				dueDate: null,
-				priority: 'Normal',
-				comments: [],
-				parentId: 2,
-			},
-		],
-		status: 'COMPLETE',
-		completed: false,
-		assignees: [users[0]],
-		dueDate: '2023-12-15',
-		priority: 'High',
-		comments: ['First iteration complete'],
-	},
-	{
-		id: 3,
-		name: 'Task 3',
-		subtasks: [],
-		status: 'IN PROGRESS',
-		completed: true,
-		assignees: [users[1]], // Jane Smith
-		dueDate: '2023-12-10',
-		priority: 'Low',
-		comments: [],
-	},
-	{
-		id: 4,
-		name: 'Task 4',
-		subtasks: [],
-		status: 'COMPLETE',
-		completed: true,
-		assignees: [users[0], users[1], users[2]], // Multiple assignees
-		dueDate: '2023-12-05',
-		priority: 'Normal',
-		comments: ['Needs review', 'Approved'],
-	},
-];
+// const tasksList = [
+// 	{
+// 		id: 1,
+// 		name: 'Task 1',
+// 		subtasks: [
+// 			{
+// 				id: 5,
+// 				name: 'Subtask 1.1',
+// 				subtasks: [],
+// 				status: 'TO DO',
+// 				completed: false,
+// 				assignees: [],
+// 				dueDate: null,
+// 				priority: 'Normal',
+// 				comments: [],
+// 				parentId: 1,
+// 			},
+// 		],
+// 		status: 'TO DO',
+// 		completed: true,
+// 		assignees: [],
+// 		dueDate: null,
+// 		priority: 'Normal',
+// 		comments: [],
+// 	},
+// 	{
+// 		id: 2,
+// 		name: 'Task 2',
+// 		subtasks: [
+// 			{
+// 				id: 6,
+// 				name: 'Subtask 2.1',
+// 				subtasks: [],
+// 				status: 'COMPLETE',
+// 				completed: true,
+// 				assignees: [users[0]],
+// 				dueDate: null,
+// 				priority: 'Low',
+// 				comments: [],
+// 				parentId: 2,
+// 			},
+// 			{
+// 				id: 7,
+// 				name: 'Subtask 2.2',
+// 				subtasks: [],
+// 				status: 'IN PROGRESS',
+// 				completed: false,
+// 				assignees: [],
+// 				dueDate: null,
+// 				priority: 'Normal',
+// 				comments: [],
+// 				parentId: 2,
+// 			},
+// 		],
+// 		status: 'COMPLETE',
+// 		completed: false,
+// 		assignees: [users[0]],
+// 		dueDate: '2023-12-15',
+// 		priority: 'High',
+// 		comments: ['First iteration complete'],
+// 	},
+// 	{
+// 		id: 3,
+// 		name: 'Task 3',
+// 		subtasks: [],
+// 		status: 'IN PROGRESS',
+// 		completed: true,
+// 		assignees: [users[1]], // Jane Smith
+// 		dueDate: '2023-12-10',
+// 		priority: 'Low',
+// 		comments: [],
+// 	},
+// 	{
+// 		id: 4,
+// 		name: 'Task 4',
+// 		subtasks: [],
+// 		status: 'COMPLETE',
+// 		completed: true,
+// 		assignees: [users[0], users[1], users[2]], // Multiple assignees
+// 		dueDate: '2023-12-05',
+// 		priority: 'Normal',
+// 		comments: ['Needs review', 'Approved'],
+// 	},
+// ];
 
 type SelectedTask = {
-	taskId: number;
+	taskId: string;
 	taskName: string;
 	duration: string;
 };
@@ -122,9 +125,8 @@ type CreatePertDialogProps = {
 		pertName: string;
 		description: string;
 		selectedTasks: {
-			taskId: number;
-			taskName: string;
-			duration: number;
+			issueId: string;
+			parentTaskId? : string;
 		}[];
 	}) => void;
 	projectId: string;
@@ -141,18 +143,41 @@ export default function CreatePertDialog({
 	const [selectedTasks, setSelectedTasks] = useState<SelectedTask[]>([]);
 	const [selectedTaskId, setSelectedTaskId] = useState<string>('');
 	const [searchTerm, setSearchTerm] = useState('');
+	const [tasksList, setTasksList] = useState<Task[]>([]);
+
+
+
+	//fetch task theo project id
+	useEffect(() => {
+		if (open) {
+			(async () => {
+				try {
+					const resIssues = await workspaceService.getIssues({ projectId });
+
+					const issueData = Array.isArray(resIssues.data)
+					  ? resIssues.data
+					  : [resIssues.data];
+					
+					const converted = issueData.map(convertIssueToTask);
+					setTasksList(converted);
+				} catch (error) {
+					console.error('Failed to fetch tasks:', error);
+				}
+			})();
+		}
+	}, [open, projectId]);
 
 	// Add a selected task
 	const handleAddTask = () => {
-		const taskId = parseInt(selectedTaskId);
+		const taskId = selectedTaskId;
 		if (!taskId) return;
 
 		// Check if task is already selected
-		if (selectedTasks.some((task) => task.taskId === taskId)) {
+		if (selectedTasks.some((task) => task.taskId.toString() === taskId)) {
 			return;
 		}
 
-		const selectedTask = tasksList.find((task) => task.id === taskId);
+		const selectedTask = tasksList.find((task) => task.id === selectedTaskId);
 		if (selectedTask) {
 			setSelectedTasks([
 				...selectedTasks,
@@ -168,12 +193,12 @@ export default function CreatePertDialog({
 	};
 
 	// Remove a task from selection
-	const handleRemoveTask = (taskId: number) => {
+	const handleRemoveTask = (taskId: string) => {
 		setSelectedTasks(selectedTasks.filter((task) => task.taskId !== taskId));
 	};
 
 	// Update duration for a specific task
-	const handleDurationChange = (taskId: number, duration: string) => {
+	const handleDurationChange = (taskId: string, duration: string) => {
 		setSelectedTasks(
 			selectedTasks.map((task) => (task.taskId === taskId ? { ...task, duration } : task)),
 		);
@@ -194,9 +219,7 @@ export default function CreatePertDialog({
 			pertName,
 			description,
 			selectedTasks: selectedTasks.map((task) => ({
-				taskId: task.taskId,
-				taskName: task.taskName,
-				duration: parseFloat(task.duration),
+				issueId: task.taskId,
 			})),
 		});
 		setOpen(false);
@@ -216,7 +239,7 @@ export default function CreatePertDialog({
 	// Get tasks that haven't been selected yet and match search term
 	const filteredTasks = tasksList.filter((task) => {
 		// Not already selected
-		const notSelected = !selectedTasks.some((selectedTask) => selectedTask.taskId === task.id);
+		const notSelected = !selectedTasks.some((selectedTask) => selectedTask.taskId.toString() === task.id);
 		// Matches search term
 		const matchesSearch =
 			searchTerm.trim() === '' || task.name.toLowerCase().includes(searchTerm.toLowerCase());

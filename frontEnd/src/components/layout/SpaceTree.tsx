@@ -80,26 +80,32 @@ function SpaceTree({ item, isPert = false }: SpaceTreeProps) {
 		pertName: string;
 		description: string;
 		selectedTasks: {
-			taskId: number;
-			taskName: string;
-			duration: number;
+			issueId: string;
+			parentTaskId? : string;
 		}[];
 	}) => {
 		try {
+			const tasks = pertData.selectedTasks.map((task) => ({
+				issueId: task.issueId.toString(),
+				parentIssueId: task.parentTaskId?.toString(),
+			}));
+	
 			const pertId = await createPert({
 				projectId: pertData.projectId,
 				pertName: pertData.pertName,
 				description: pertData.description,
+				tasks,
 			});
-
+	
 			setIsCreatePertDialogOpen(false);
-			// Gợi ý: tính toán thời gian dự kiến từ selectedTasks nếu cần
 			router.push(`/dashboard/p/${pertId}`);
-			toast.success('PERT task created (placeholder)');
+			toast.success('PERT created successfully');
 		} catch (error) {
 			console.error('Error creating pert:', error);
+			toast.error('Failed to create PERT');
 		}
 	};
+	
 
 	if (!isPert) {
 		const pertList = projectPertMap[item.id] ?? [];

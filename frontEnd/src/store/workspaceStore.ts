@@ -24,9 +24,13 @@ interface WorkspaceState {
 		page: number;
 		limit: number;
 		loading: boolean;
-	  };
-	getAvailableUsersForWorkspace: (workspaceId: string, page?: number, limit?: number) => Promise<void>;
-
+	};
+	getAvailableUsersForWorkspace: (
+		workspaceId: string,
+		page?: number,
+		limit?: number,
+	) => Promise<void>;
+	removeMembersFromWorkspace: (workspaceId: string, memberIds: string[]) => Promise<void>;
 
 	// project
 	projectPertMap: Record<string, Pert[]>;
@@ -36,15 +40,18 @@ interface WorkspaceState {
 		projectId: string;
 		pertName: string;
 		description: string;
-		// selectedTasks: { taskId: number; taskName: string; duration: number }[];
-	}) => Promise<string>;
+		tasks: {
+		  issueId: string;
+		  parentIssueId?: string;
+		}[];
+	  }) => Promise<string>;
 	getPertByProjectId: (projectId: string) => Promise<void>;
+	fetchPertListByProjectId: (projectId: string) => Promise<Pert[]>;
 	getPertById: (pertId: string) => Promise<Pert | null>;
 	// find item
 	pathCache: Record<string, Path[]>;
 	findPathToItem: (itemId: string) => Path[] | null;
 	setPathToItem: (itemId: string, path: Path[]) => void;
-	
 }
 
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
@@ -98,24 +105,28 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 	},
 
 	addMembersToWorkspace: async (workspaceId: string, memberIds: string[]) => {
-		const response = await workspaceService.addMemberWorkspaceById(workspaceId, memberIds);
-	
+		const response = await workspaceService.addMemberWorkspaceByIds(workspaceId, memberIds);
+
 		if (response.status === 'success') {
-			debugger;
 			// Trích xuất danh sách user từ response.data
-			const newMembers: User[] = response.data.map((item: any) => item.user);
-	
+			const newMembers = response.data.map((item: { id: string; user: User }) => {
+				return {
+					id: item.id,
+					user: item.user,
+				};
+			});
+
 			const updatedWorkspaces = get().workspaces.map((workspace) => {
 				if (workspace.id === workspaceId) {
 					const existingMembers = workspace.members || []; // đảm bảo là array
-			
+
 					const allMembers = [
 						...existingMembers,
 						...newMembers.filter(
-							(newMember) => !existingMembers.some((m) => m.id === newMember.id)
+							(newMember) => !existingMembers.some((m) => m.id === newMember.id),
 						),
 					];
-			
+
 					return {
 						...workspace,
 						members: allMembers,
@@ -123,62 +134,77 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 				}
 				return workspace;
 			});
-	
+
 			set({ workspaces: updatedWorkspaces });
 		} else {
 			throw new Error('Failed to add members to workspace');
 		}
 	},
 
-	  availableUsers: {
+	removeMembersFromWorkspace: async (workspaceId: string, memberIds: string[]) => {
+		const response = await workspaceService.removeMembers(workspaceId, memberIds);
+		if (response.status === 'success') {
+			set({
+				workspaces: get().workspaces.map((workspace) => ({
+					...workspace,
+					members: workspace.members?.filter(
+						(member) => !memberIds.includes(member.user.id),
+					),
+				})),
+			});
+		} else {
+			throw new Error('Failed to remove members from workspace');
+		}
+	},
+
+	availableUsers: {
 		users: [],
 		totalCount: 0,
 		page: 1,
 		limit: 10,
-		loading: false
-	  },
-	  
-	  getAvailableUsersForWorkspace: async (workspaceId: string, page = 1, limit = 10) => {
+		loading: false,
+	},
+
+	getAvailableUsersForWorkspace: async (workspaceId: string, page = 1, limit = 10) => {
 		try {
-			debugger;
-		  set(state => ({
-			availableUsers: {
-			  ...state.availableUsers,
-			  loading: true
-			}
-		  }));
-		  
-		  const response = await workspaceService.getAvailableUsers(workspaceId, page, limit);
-		  
-		  if (response.status === 'success') {
-			set({
-			  availableUsers: {
-				users: response.data.users,
-				totalCount: response.data.totalCount,
-				page: response.data.page,
-				limit: response.data.limit,
-				loading: false
-			  }
-			});
-		  } else {
-			set(state => ({
-			  availableUsers: {
-				...state.availableUsers,
-				loading: false
-			  }
+			set((state) => ({
+				availableUsers: {
+					...state.availableUsers,
+					loading: true,
+				},
 			}));
-			throw new Error('Failed to fetch available users');
-		  }
-		} catch (error) {
-		  set(state => ({
-			availableUsers: {
-			  ...state.availableUsers,
-			  loading: false
+
+			const response = await workspaceService.getAvailableUsers(workspaceId, page, limit);
+
+			if (response.status === 'success') {
+				set({
+					availableUsers: {
+						users: response.data.users,
+						totalCount: response.data.totalCount,
+						page: response.data.page,
+						limit: response.data.limit,
+						loading: false,
+					},
+				});
+			} else {
+				set((state) => ({
+					availableUsers: {
+						...state.availableUsers,
+						loading: false,
+					},
+				}));
+				throw new Error('Failed to fetch available users');
 			}
-		  }));
-		  throw error;
+		} catch (error) {
+			set((state) => ({
+				availableUsers: {
+					...state.availableUsers,
+					loading: false,
+				},
+			}));
+			throw error;
 		}
-	  },
+	},
 
 	findPathToItem: (itemId: string) => {
 		const workspaces = get().workspaces;
@@ -242,26 +268,33 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 			})),
 		});
 	},
-	createPert: async (params: { projectId: string; pertName: string; description: string }) => {
+	createPert: async (params: {
+		projectId: string;
+		pertName: string;
+		description: string;
+		tasks: { issueId: string; parentIssueId?: string }[];
+	  }) => {
 		const response = await workspaceService.createPert({
-			projectId: params.projectId,
-			taskNodes: [],
-			taskEdges: [],
+		  projectId: params.projectId,
+		  name: params.pertName,
+		  tasks: params.tasks,
 		});
-
+	  
 		if (response.status === 'success') {
-			const currentPert = get().projectPertMap[params.projectId] ?? [];
-			const updatedProjectPertMap = {
-				...get().projectPertMap,
-				[params.projectId]: currentPert.concat(response.data),
-			};
-			set({
-				projectPertMap: updatedProjectPertMap,
-			});
-			return response.data.id;
+		  const currentPert = get().projectPertMap[params.projectId] ?? [];
+		  const updatedProjectPertMap = {
+			...get().projectPertMap,
+			[params.projectId]: currentPert.concat(response.data),
+		  };
+		  set({
+			projectPertMap: updatedProjectPertMap,
+		  });
+		  return response.data.id;
 		}
+	  
 		throw new Error('Failed to create pert');
-	},
+	  },
+	  
 	getPertByProjectId: async (projectId: string) => {
 		const response = await workspaceService.retrievePertByProjectId(projectId);
 
@@ -271,6 +304,17 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 			throw new Error('Failed to get pert by project id');
 		}
 	},
+
+	fetchPertListByProjectId: async (projectId: string) => {
+		const response = await workspaceService.retrievePertByProjectId(projectId);
+	
+		if (response.status === 'success') {
+			return response.data; // trả về danh sách PERT
+		} else {
+			throw new Error('Failed to fetch pert list');
+		}
+	},
+
 	getPertById: async (pertId: string) => {
 		const response = await workspaceService.retrievePertById(pertId);
 		if (response.status === 'success') {
