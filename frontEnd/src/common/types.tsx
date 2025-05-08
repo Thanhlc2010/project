@@ -13,6 +13,7 @@ export type User = {
 export type Task = {
 	id: string;
 	name: string;
+	description?: string,
 	duration?: number; // Optional because second version doesn't use it
 	dependencies?: string[]; // Optional because only first version has it
 	subtasks?: Task[]; // Optional for tasks that don't have subtasks

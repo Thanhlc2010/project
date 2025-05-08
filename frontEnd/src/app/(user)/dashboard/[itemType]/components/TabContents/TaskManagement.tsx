@@ -8,6 +8,7 @@ import {
 	MoreHorizontal,
 	Plus,
 	Trash2,
+	User,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -20,11 +21,11 @@ import {
 	Tag
  } from 'antd';
 
- import { useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 
- import { workspaceService } from '@/services/workspaceService';
- import { useWorkspaceStore } from '@/store/workspaceStore';
- import { authService } from '@/services/authService';
+import { workspaceService } from '@/services/workspaceService';
+import { useWorkspaceStore } from '@/store/workspaceStore';
+import { authService } from '@/services/authService';
 
 // Define interfaces for our data
 interface User {
@@ -35,8 +36,9 @@ interface User {
 
 // Modify the Task interface to support nested subtasks
 interface Task {
-	id?: string;
+	id: string;
 	name: string;
+	description?: string;
 	subtasks: Task[]; // Changed from number to array of Task objects
 	status: 'TO DO' | 'IN PROGRESS' | 'COMPLETE';
 	completed: boolean;
@@ -65,20 +67,23 @@ interface StatusDropZoneProps {
 	children: React.ReactNode;
 }
 
-// Sample users
-const users: User[] = [
-	{ id: '1', name: 'John Doe', avatar: 'https://randomuser.me/api/portraits/men/1.jpg' },
-	{ id: '2', name: 'Jane Smith', avatar: 'https://randomuser.me/api/portraits/women/1.jpg' },
-	{ id: '3', name: 'Alex Johnson' },
-	{ id: '4', name: 'Maria Garcia' },
-	{ id: '5', name: 'David Kim' },
-	{ id: '6', name: 'Sarah Brown' },
-];
+const convertDateFormat = (isoDate: string) : string => {
+	if(!isoDate) return '';
+	const dateObj = new Date(isoDate);
+
+	const yyyy = dateObj.getFullYear();
+	const dd = String(dateObj.getDate()).padStart(2, '0');
+	const mm = String(dateObj.getMonth() + 1).padStart(2, '0'); // Tháng bắt đầu từ 0
+
+	const formatted = `${yyyy}-${mm}-${dd}`;
+	return formatted;
+}
 
 const convertIssueToTask = (issue: any): Task => {
 	return {
 		id: issue.id, 
 		name: issue.title,
+		description: issue.description || '',
 		subtasks: [], 
 		status:
 			issue.issueStatus === 'TODO'
@@ -98,7 +103,7 @@ const convertIssueToTask = (issue: any): Task => {
 					},
 			  ]
 			: [],
-		dueDate: issue.dueDate || null,
+		dueDate: convertDateFormat(issue.dueDate),
 		priority:
 			issue.priority === 'LOW'
 				? 'Low'
@@ -107,7 +112,7 @@ const convertIssueToTask = (issue: any): Task => {
 				: issue.priority === 'HIGH'
 				? 'High'
 				: 'Urgent',
-		comments: [], // bạn có thể load riêng nếu muốn
+		comments: [],
 		parentId: issue.parentId || null,
 		ES: undefined,
 		EF: undefined,
@@ -116,11 +121,12 @@ const convertIssueToTask = (issue: any): Task => {
 	};
 };
 
+// @audit : assignee có thể sửa nhiều người 
 const convertTaskToIssue = (task: Task, assigneeId: string, projectId: string): any => {
 	return {
 		title: task.name,
-		description: '', 
-		assigneeId: assigneeId, 
+		description: task.description || '', 
+		assigneeId: task.assignees[0].id, 
 		projectId: projectId,
 		priority:
 			task.priority === 'Low'
@@ -161,163 +167,246 @@ function getUser(){
   
 const TaskManagementUI = () => {
 	const user = getUser();
+
+	const [users, setUsers] = useState<User[]>([
+		{ id: '1', name: 'John Doe', avatar: 'https://randomuser.me/api/portraits/men/1.jpg' },
+		{ id: '2', name: 'Jane Smith', avatar: 'https://randomuser.me/api/portraits/women/1.jpg' },
+		{ id: '3', name: 'Huy' },
+		{ id: '4', name: 'Maria Garcia' },
+		{ id: '5', name: 'David Kim' },
+		{ id: '6', name: 'Sarah Brown' },
+	])
 	const projectId = useParams().itemId as string;
+	const [workspaceId, setWorkspaceId] = useState(''); 
 	const route = useRouter();
 
 	const [selectedAssigneeId, setSelectedAssigneeId] = useState<string | null>(null);
 	const [tasks, setTasks] = useState<Task[]>([
-		{
-			id: 1,
-			name: 'Task 1',
-			subtasks: [
-				{
-					id: 5,
-					name: 'Subtask 1.1',
-					subtasks: [],
-					status: 'TO DO',
-					completed: false,
-					assignees: [],
-					dueDate: null,
-					priority: 'Normal',
-					comments: [],
-					parentId: 1,
-				},
-			],
-			status: 'TO DO',
-			completed: true,
-			assignees: [],
-			dueDate: null,
-			priority: 'Normal',
-			comments: [],
-		},
-		{
-			id: 2,
-			name: 'Task 2',
-			subtasks: [
-				{
-					id: 6,
-					name: 'Subtask 2.1',
-					subtasks: [],
-					status: 'COMPLETE',
-					completed: true,
-					assignees: [users[0]],
-					dueDate: null,
-					priority: 'Low',
-					comments: [],
-					parentId: 2,
-				},
-				{
-					id: 7,
-					name: 'Subtask 2.2',
-					subtasks: [],
-					status: 'IN PROGRESS',
-					completed: false,
-					assignees: [],
-					dueDate: null,
-					priority: 'Normal',
-					comments: [],
-					parentId: 2,
-				},
-			],
-			status: 'COMPLETE',
-			completed: false,
-			assignees: [users[0]],
-			dueDate: '2024-12-12',
-			priority: 'High',
-			comments: ['First iteration complete'],
-		},
-		{
-			id: 3,
-			name: 'Task 3',
-			subtasks: [],
-			status: 'IN PROGRESS',
-			completed: true,
-			assignees: [users[1]], // Jane Smith
-			dueDate: '2023-1-10',
-			priority: 'Low',
-			comments: [],
-		},
-		{
-			id: 4,
-			name: 'Task 4',
-			subtasks: [],
-			status: 'COMPLETE',
-			completed: true,
-			assignees: [users[0], users[1], users[2]], // Multiple assignees
-			dueDate: '2025-12-05',
-			priority: 'Normal',
-			comments: ['Needs review', 'Approved'],
-		},
+	// 	{
+	// 		id: 1,
+	// 		name: 'Task 1',
+	// 		subtasks: [
+	// 			{
+	// 				id: 5,
+	// 				name: 'Subtask 1.1',
+	// 				subtasks: [],
+	// 				status: 'TO DO',
+	// 				completed: false,
+	// 				assignees: [],
+	// 				dueDate: null,
+	// 				priority: 'Normal',
+	// 				comments: [],
+	// 				parentId: 1,
+	// 			},
+	// 		],
+	// 		status: 'TO DO',
+	// 		completed: true,
+	// 		assignees: [],
+	// 		dueDate: null,
+	// 		priority: 'Normal',
+	// 		comments: [],
+	// 	},
+	// 	{
+	// 		id: 2,
+	// 		name: 'Task 2',
+	// 		subtasks: [
+	// 			{
+	// 				id: 6,
+	// 				name: 'Subtask 2.1',
+	// 				subtasks: [],
+	// 				status: 'COMPLETE',
+	// 				completed: true,
+	// 				assignees: [users[0]],
+	// 				dueDate: null,
+	// 				priority: 'Low',
+	// 				comments: [],
+	// 				parentId: 2,
+	// 			},
+	// 			{
+	// 				id: 7,
+	// 				name: 'Subtask 2.2',
+	// 				subtasks: [],
+	// 				status: 'IN PROGRESS',
+	// 				completed: false,
+	// 				assignees: [],
+	// 				dueDate: null,
+	// 				priority: 'Normal',
+	// 				comments: [],
+	// 				parentId: 2,
+	// 			},
+	// 		],
+	// 		status: 'COMPLETE',
+	// 		completed: false,
+	// 		assignees: [users[0]],
+	// 		dueDate: '2024-12-12',
+	// 		priority: 'High',
+	// 		comments: ['First iteration complete'],
+	// 	},
+	// 	{
+	// 		id: 3,
+	// 		name: 'Task 3',
+	// 		subtasks: [],
+	// 		status: 'IN PROGRESS',
+	// 		completed: true,
+	// 		assignees: [users[1]], // Jane Smith
+	// 		dueDate: '2023-1-10',
+	// 		priority: 'Low',
+	// 		comments: [],
+	// 	},
+	// 	{
+	// 		id: 4,
+	// 		name: 'Task 4',
+	// 		subtasks: [],
+	// 		status: 'COMPLETE',
+	// 		completed: true,
+	// 		assignees: [users[0], users[1], users[2]], // Multiple assignees
+	// 		dueDate: '2025-12-05',
+	// 		priority: 'Normal',
+	// 		comments: ['Needs review', 'Approved'],
+	// 	},
 	]);
+
 	
 	const [originalTasks, setOriginalTasks] = useState<Task[]>([]); 
 	const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]); 
+	const [reloadCounter, setReloadCounter] = useState(0);
 
+	// GET ALL TASK 
 	useEffect(() => {
-		const fetchIssues = async () => {
-			const res = await workspaceService.getIssues({ projectId });
-			if (res.status === 'success') {
-				const converted = (res.data as any[]).map(convertIssueToTask);
-				setTasks(converted);
+		const fetchIssues = async () => {			
+			const resIssues = await workspaceService.getIssues({ projectId });
+
+			if (resIssues.status === 'success') {
+				const allIssues = resIssues.data as any[];
+	
+				// subtaskMap: parentId => list subtasks
+				const subtaskMap: Record<string, any[]> = {};
+				allIssues.forEach(issue => {
+					if (issue.parentId) {
+						if (!subtaskMap[issue.parentId]) {
+							subtaskMap[issue.parentId] = [];
+						}
+						subtaskMap[issue.parentId].push(issue);
+					}
+				});
+	
+				// Chỉ lấy những task cha (không có parentId)
+				const topLevelIssues = allIssues.filter(issue => !issue.parentId);
+	
+				// Xử lý từng task cha
+				const fetchCommentsForTasks = await Promise.all(
+					topLevelIssues.map(async (issue) => {
+						const task = convertIssueToTask(issue);
+	
+						// Lấy subtasks
+						const subtasks = (subtaskMap[issue.id] || []).map(sub => convertIssueToTask(sub));
+						task.subtasks = subtasks;
+	
+						// ✅ Fetch comment riêng cho từng task
+						const resComments = await workspaceService.getComments({ issueId: issue.id });
+						if (resComments.status === 'success') {
+							const comments = (resComments.data as any[]).map((c) => c.content);
+							task.comments = comments || [];
+						} else {
+							task.comments = [];
+						}
+	
+						return task;
+					})
+				);
+				
+				console.log("All task : ", fetchCommentsForTasks);
+				
+				setTasks(fetchCommentsForTasks);
+				setOriginalTasks(fetchCommentsForTasks);
 			}
 		};
 	
-		if (projectId) {
-			fetchIssues();
-		}
+		if (projectId) fetchIssues();
+	}, [projectId, reloadCounter]);
+
+	// GET WORKSPACE ID 
+	useEffect(() => {
+		const fetchProject = async () => {
+			const resProject = await workspaceService.getProjectById(projectId);
+			if (resProject.status === 'success') {
+				setWorkspaceId(resProject.data.workspaceId);
+				console.log("✅ Workspace ID:", resProject.data.workspaceId);
+			}
+		};
+		if (projectId) fetchProject();
 	}, [projectId]);
 
+	// GET ALL USER IN PROJECT
+	// @audit : Problem : assignee not in project member
 	useEffect(() => {
-  		if (originalTasks.length === 0 && tasks.length > 0) {
-    		setOriginalTasks(tasks);
-  			}
-			}, [tasks]);
+		const fetchUsers = async () => {
+			if (!workspaceId) return;
+
+			const resUsers = await workspaceService.getMembersByWorkspaceId(workspaceId);
+			console.log("👥 Users of workspace:", resUsers.data);
+
+			const userList: User[] = resUsers.data.map((member: any) => ({
+				id: member.user.id,
+				name: member.user.name,
+				avatar: '', 
+			}));
+			setUsers(userList);
+		};
+		fetchUsers();
+	}, [workspaceId]);
+
+
+	useEffect(() => {
+		if (originalTasks.length === 0 && tasks.length > 0) {
+			setOriginalTasks(tasks);
+		}
+	}, [tasks]);
   
   	const handleSearchAssignees = (idUser: string) => {
-  // Toggle user selection: add if not selected, remove if already selected
-  const newSelectedIds = selectedUserIds.includes(idUser)
-    ? selectedUserIds.filter(id => id !== idUser)
-    : [...selectedUserIds, idUser];
+	// Toggle user selection: add if not selected, remove if already selected
+		const newSelectedIds = selectedUserIds.includes(idUser)
+		? selectedUserIds.filter(id => id !== idUser)
+		: [...selectedUserIds, idUser];
 
-  setSelectedUserIds(newSelectedIds);
+	setSelectedUserIds(newSelectedIds);
 
- // If no assignee is selected, reset to show all original tasks
-  if (newSelectedIds.length === 0) {
-    setTasks(originalTasks);
-    return;
-  }
+	// If no assignee is selected, reset to show all original tasks
+	if (newSelectedIds.length === 0) {
+		setTasks(originalTasks);
+		return;
+	}
 
-  /// Filter tasks based on selected assignees
-  const filtered = originalTasks
-    .map(task => {
-      
-      const taskMatches = newSelectedIds.every(id =>
-        task.assignees.some(user => user.id === id)
-      );
+	/// Filter tasks based on selected assignees
+	const filtered = originalTasks
+		.map(task => {
+		
+		const taskMatches = newSelectedIds.every(id =>
+			task.assignees.some(user => user.id === id)
+		);
 
-     
-      const filteredSubtasks = task.subtasks.filter(sub =>
-        newSelectedIds.every(id =>
-          sub.assignees.some(user => user.id === id)
-        )
-      );
+		
+		const filteredSubtasks = task.subtasks.filter(sub =>
+			newSelectedIds.every(id =>
+			sub.assignees.some(user => user.id === id)
+			)
+		);
 
-	  	// Keep the task if either it or at least one subtask matches
-      if (taskMatches || filteredSubtasks.length > 0) {
-        return {
-          ...task,
-          subtasks: filteredSubtasks // keep matching subtasks
-        };
-      }
-      return null;
-    })
-    .filter(Boolean) as Task[]; // remove null
+			// Keep the task if either it or at least one subtask matches
+		if (taskMatches || filteredSubtasks.length > 0) {
+			return {
+			...task,
+			subtasks: filteredSubtasks // keep matching subtasks
+			};
+		}
+		return null;
+		})
+		.filter(Boolean) as Task[]; // remove null
 
-  // update list view
-  setTasks(filtered.length > 0 ? filtered : []);
-  setIsFilteringUpcoming(false); // reset upcoming filter when assignee changes
-
-};
+		// update list view
+		setTasks(filtered.length > 0 ? filtered : []);
+		setIsFilteringUpcoming(false); // reset upcoming filter when assignee changes
+	};
 
   
 	const assigneeMenu = users.map((user) => ({
@@ -333,107 +422,109 @@ const TaskManagementUI = () => {
 		  </div>
 		),
 		onClick: () => handleSearchAssignees(user.id),
-	  }));
+	}));
 	  
 	// Filter tasks and subtasks with due dates in the future
 	const [isFilteringUpcoming, setIsFilteringUpcoming] = useState(false);
 
 	const filterUpcomingTasks = () => {
-	const now = new Date();
+		const now = new Date();
 
-	if (isFilteringUpcoming) {
-		// Go back to current assignee-filtered view
-		const assigneeFiltered = originalTasks.map(task => {
+		if (isFilteringUpcoming) {
+			// Go back to current assignee-filtered view
+			const assigneeFiltered = originalTasks.map(task => {
+				const subtasks = task.subtasks.filter(sub =>
+					selectedUserIds.every(id =>
+						sub.assignees.some(user => user.id === id)
+					)
+				);
+
+				const taskMatches = selectedUserIds.every(id =>
+					task.assignees.some(user => user.id === id)
+				);
+
+				if (taskMatches || subtasks.length > 0) {
+					return { ...task, subtasks };
+				}
+				return null;
+			}).filter(Boolean) as Task[];
+			setTasks(selectedUserIds.length > 0 ? assigneeFiltered : originalTasks);
+			setIsFilteringUpcoming(false);
+			return;
+		}
+
+		// Filter based on upcoming tasks only from current task list
+		const filtered = tasks.map(task => {
 			const subtasks = task.subtasks.filter(sub =>
-				selectedUserIds.every(id =>
-					sub.assignees.some(user => user.id === id)
-				)
+				sub.dueDate && new Date(sub.dueDate) > now
 			);
+			const taskDueUpcoming = task.dueDate && new Date(task.dueDate) > now;
 
-			const taskMatches = selectedUserIds.every(id =>
-				task.assignees.some(user => user.id === id)
-			);
-
-			if (taskMatches || subtasks.length > 0) {
+			if (taskDueUpcoming || subtasks.length > 0) {
 				return { ...task, subtasks };
 			}
 			return null;
 		}).filter(Boolean) as Task[];
-		setTasks(selectedUserIds.length > 0 ? assigneeFiltered : originalTasks);
-		setIsFilteringUpcoming(false);
-		return;
-	}
 
-	// Filter based on upcoming tasks only from current task list
-	const filtered = tasks.map(task => {
-		const subtasks = task.subtasks.filter(sub =>
-			sub.dueDate && new Date(sub.dueDate) > now
-		);
-		const taskDueUpcoming = task.dueDate && new Date(task.dueDate) > now;
+		setTasks(filtered);
+		setIsFilteringUpcoming(true);
+	};
 
-		if (taskDueUpcoming || subtasks.length > 0) {
-			return { ...task, subtasks };
+	const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+
+	const addTask = async(
+		status: Task['status'],
+		taskName: string,
+		assigneeIds: string[] = []
+	): Promise<void> => {
+		if (!taskName || taskName.trim() === '') return;
+
+		const newTask: Task = {
+			id: (tasks.length + 1).toString(), 
+			name: taskName,
+			subtasks: [],
+			status,
+			completed: false,
+			assignees: [user],
+			dueDate: null,
+			priority: 'Normal',
+			comments: [],
+		};
+		// Create task in BE 
+		const newIssue = convertTaskToIssue(newTask, user.id, projectId);
+		
+		
+		const res = await workspaceService.createIssue(newIssue);
+		console.log("Response :", res);
+		
+		newTask.id = res.data.id;
+		console.log("New task", newTask);
+
+		const updatedTasks = [...originalTasks, newTask];
+		
+		setOriginalTasks(updatedTasks);
+
+		if (selectedUserIds.length > 0) {
+			const newIds = [...selectedUserIds];
+			handleSearchAssignees(newIds[newIds.length - 1]); 
+		} else {
+		
+			setTasks(updatedTasks);
 		}
-		return null;
-	}).filter(Boolean) as Task[];
+	};
 
-	setTasks(filtered);
-	setIsFilteringUpcoming(true);
-};
-
-	const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
-	const addTask = (
-  status: Task['status'],
-  taskName: string,
-  assigneeIds: string[] = []
-): void => {
-  if (!taskName || taskName.trim() === '') return;
-
-  const newTask: Task = {
-    // id: tasks.length + 1, 
-    name: taskName,
-    subtasks: [],
-    status,
-    completed: false,
-    assignees: user.id,
-    dueDate: null,
-    priority: 'Normal',
-    comments: [],
-  };
-  // Create task in BE 
-  const newIssue = convertTaskToIssue(newTask, user.id, projectId);
-  workspaceService.createIssue(user.id, newIssue); 
-
-
-  const updatedTasks = [...originalTasks, newTask];
-
- 
-  setOriginalTasks(updatedTasks);
-
-  if (selectedUserIds.length > 0) {
-   
-    const newIds = [...selectedUserIds];
-    handleSearchAssignees(newIds[newIds.length - 1]); 
-  } else {
-   
-    setTasks(updatedTasks);
-  }
-};
-
-
-
-	const addSubtask = (parentTaskId: number, subtaskName: string): void => {
+	const addSubtask = async (parentTaskId: string, subtaskName: string): void => {
 		if (!subtaskName.trim()) return;
 
-		const newId = Math.max(...tasks.flatMap((t) => [t.id, ...t.subtasks.map((s) => s.id)])) + 1;
+		// const newId = Math.max(...tasks.flatMap((t) => [t.id, ...t.subtasks.map((s) => s.id)])) + 1;
 
 		const newSubtask: Task = {
-			id: newId,
+			id: 'a' ,
 			name: subtaskName,
 			subtasks: [],
 			status: 'TO DO',
 			completed: false,
-			assignees: [],
+			assignees: [user],
 			dueDate: null,
 			priority: 'Normal',
 			comments: [],
@@ -442,8 +533,11 @@ const TaskManagementUI = () => {
 
 		// Add sub task in BE 
 		const newSubIssue = convertTaskToIssue(newSubtask, user.id, projectId);
-  		workspaceService.createIssue(user.id, newSubIssue); 
-
+		const res = await workspaceService.createIssue(newSubIssue);
+		console.log("Response :", res);
+		
+		newSubtask.id = res.data.id;
+		console.log("New task", newSubtask);
 		setTasks(
 			tasks.map((task) =>
 				task.id === parentTaskId
@@ -454,25 +548,48 @@ const TaskManagementUI = () => {
 	};
 
 	const updateSubtask = (
-		parentTaskId: number,
-		subtaskId: number,
-		updates: Partial<Task>,
-	): void => {
-		setTasks(
-			tasks.map((task) =>
-				task.id === parentTaskId
-					? {
-						...task,
-						subtasks: task.subtasks.map((subtask) =>
-							subtask.id === subtaskId ? { ...subtask, ...updates } : subtask,
-						),
-					}
-					: task,
-			),
+		parentTaskId: string,
+		subtaskId: string,
+		updates: Partial<Task>
+	  ): void => {
+		const parentTask = tasks.find(task => task.id === parentTaskId);
+		if (!parentTask) {
+		  console.warn(`Không tìm thấy task cha với id = ${parentTaskId}`);
+		  return;
+		}
+	  
+		const targetSubtask = parentTask.subtasks.find(sub => sub.id === subtaskId);
+		if (!targetSubtask) {
+		  console.warn(`Không tìm thấy subtask với id = ${subtaskId}`);
+		  return;
+		}
+	  
+		const updatedSubtask = { ...targetSubtask, ...updates };
+	  
+		// Gửi update lên backend
+		workspaceService.updateIssue(
+		  subtaskId,
+		  convertTaskToIssue(updatedSubtask, user.id, projectId)
 		);
+	  
+		// Cập nhật lại danh sách tasks trong state
+		const updatedTasks = tasks.map(task =>
+		  task.id === parentTaskId
+			? {
+				...task,
+				subtasks: task.subtasks.map(sub =>
+				  sub.id === subtaskId ? updatedSubtask : sub
+				),
+			  }
+			: task
+		);
+	  
+		setTasks(updatedTasks);
 	};
+	  
 
-	const deleteSubtask = (parentTaskId: number, subtaskId: number): void => {
+	// @incomplete : Dont have delete API 
+	const deleteSubtask = (parentTaskId: string, subtaskId: string): void => {
 		setTasks(
 			tasks.map((task) =>
 				task.id === parentTaskId
@@ -485,55 +602,127 @@ const TaskManagementUI = () => {
 		);
 	};
 
-	const updateTaskStatus = (taskId: number, newStatus: Task['status']): void => {
-		setTasks(tasks.map((task) => (task.id === taskId ? { ...task, status: newStatus } : task)));
-	};
+	const updateTaskStatus = (taskId: string, newStatus: Task['status']): void => {
+		const targetTask = tasks.find((task) => task.id === taskId);
+		if (!targetTask) {
+			console.warn(`Không tìm thấy task với id = ${taskId}`);
+			return;
+		}
 
-	const updateTaskPriority = (taskId: number, newPriority: Task['priority']): void => {
+		// Update status 
+		const updatedTask = { ...targetTask, status: newStatus };
+		// console.log("Updated task :", updatedTask);
+		
+		workspaceService.updateIssue(taskId, convertTaskToIssue(updatedTask, user.id, projectId));
 
-		setTasks(
-			tasks.map((task) => (task.id === taskId ? { ...task, priority: newPriority } : task)),
+		// Cập nhật lại state `tasks`
+		const updatedTasks = tasks.map((task) =>
+			task.id === taskId ? updatedTask : task
 		);
+
+		setTasks(updatedTasks);
 	};
 
-		const assignTaskToUsers = (taskId: number, userIds: string[]): void => {
-  		const updatedTasks = tasks.map((task) =>
-				task.id === taskId
-					? {
-         				...task,
-          				assignees: users.filter((user) => userIds.includes(user.id)),
-        				}
-      				: task
-  				);
+	const updateTaskPriority = (taskId: string, newPriority: Task['priority']): void => {
+		const targetTask = tasks.find((task) => task.id === taskId);
+		if (!targetTask) {
+			console.warn(`Không tìm thấy task với id = ${taskId}`);
+			return;
+		}
+
+		// Update status 
+		const updatedTask = { ...targetTask, priority: newPriority };
+		// console.log("Updated task :", updatedTask);
+		
+		workspaceService.updateIssue(taskId, convertTaskToIssue(updatedTask, user.id, projectId));
+
+		// Cập nhật lại state `tasks`
+		const updatedTasks = tasks.map((task) =>
+			task.id === taskId ? updatedTask : task
+		);
+
+		setTasks(updatedTasks);
+	};
+
+	const updateTaskDueDate = (taskId: string, date: string): void => {
+		const targetTask = tasks.find((task) => task.id === taskId);
+		if (!targetTask) {
+			console.warn(`Không tìm thấy task với id = ${taskId}`);
+			return;
+		}
+
+		// Update status 
+		const updatedTask = { ...targetTask, dueDate: date };
+		// console.log("Updated task :", updatedTask);
+		
+		workspaceService.updateIssue(taskId, convertTaskToIssue(updatedTask, user.id, projectId));
+
+		const updatedTasks = tasks.map((task) =>
+			task.id === taskId ? updatedTask : task
+		);
+
+		setTasks(updatedTasks);
+
+		if (selectedUserIds.length === 0 && !isFilteringUpcoming) {
+				setOriginalTasks(updatedTasks);
+		}
+	};
+
+	// @audit Hiện đang chỉ gán assignee cho 1 user
+	const assignTaskToUsers = async (taskId: string, userIds: string[]): void => {
+  		console.log("UserIDS ", userIds);
+		const newestUserId = userIds[userIds.length - 1];
+		
+		// const updatedTasks = tasks.map((task) =>
+		// 	task.id === taskId
+		// 		? {
+		// 			...task,
+		// 			assignees: users.filter((user) => userIds.includes(user.id)),
+		// 			}
+		// 		: task
+		// );
+
+		const targetTask = tasks.find((task) => task.id === taskId);
+		if (!targetTask) {
+			console.warn(`Không tìm thấy task với id = ${taskId}`);
+			return;
+		}
+
+		// Update target task
+		const updatedTask = {
+			...targetTask,
+			assignees: users.filter((user) => user.id == newestUserId),
+		};
+		
+		const updatedTasks = tasks.map((task) =>
+			task.id === taskId ? updatedTask : task
+		);
 
   		setTasks(updatedTasks);
 
-  		if (selectedUserIds.length === 0 && !isFilteringUpcoming) {
-    	setOriginalTasks(updatedTasks);
-  	}
-};
+		const resCheckExist = await workspaceService.checkExistMemberInProject(projectId, newestUserId);
+		console.log("Check exist", resCheckExist.data);
+		if(!resCheckExist.data){
+			await workspaceService.addMemberToProject(projectId, newestUserId);
+		}
+		
+		await workspaceService.updateIssue(taskId, convertTaskToIssue(updatedTask, user.id, projectId));
 
-	const addCommentToTask = (taskId: number, comment: string): void => {
+  		if (selectedUserIds.length === 0 && !isFilteringUpcoming) {
+			setOriginalTasks(updatedTasks);
+		}
+	};
+
+	const addCommentToTask = (taskId: string, comment: string): void => {
 		if (!comment.trim()) return;
 
+		workspaceService.addComment(taskId, comment);
 		setTasks(
 			tasks.map((task) =>
 				task.id === taskId ? { ...task, comments: [...task.comments, comment] } : task,
 			),
 		);
 	};
-
-	const updateDueDate = (taskId: number, date: string): void => {
-  	const updatedTasks = tasks.map((task) =>
-   		 task.id === taskId ? { ...task, dueDate: date } : task
-  		);
-
-  			setTasks(updatedTasks);
-
-  			if (selectedUserIds.length === 0 && !isFilteringUpcoming) {
-   				 setOriginalTasks(updatedTasks);
-  			}
-		};
 
 	const countByStatus = (status: Task['status']): number => {
 		return tasks.filter((task) => task.status === status && !task.parentId).length;
@@ -569,10 +758,11 @@ const TaskManagementUI = () => {
 		);
 	};
 
+	// @audit 
 	const AssigneeSelector: React.FC<{
-		taskId: number;
+		taskId: string;
 		assignees: User[];
-		parentTaskId?: number; // Add optional parentTaskId prop to identify subtasks
+		parentTaskId?: string; // Add optional parentTaskId prop to identify subtasks
 	}> = ({ taskId, assignees, parentTaskId }) => {
 		const [isOpen, setIsOpen] = useState(false);
 		const [searchTerm, setSearchTerm] = useState('');
@@ -762,10 +952,11 @@ const TaskManagementUI = () => {
 			</div>
 		);
 	};
+
 	const PrioritySelector: React.FC<{
-		taskId: number;
+		taskId: string;
 		priority: Task['priority'];
-		updatePriority: (taskId: number, priority: Task['priority']) => void;
+		updatePriority: (taskId: string, priority: Task['priority']) => void;
 	}> = ({ taskId, priority, updatePriority }) => {
 		const [isOpen, setIsOpen] = useState(false);
 
@@ -812,6 +1003,8 @@ const TaskManagementUI = () => {
 
 		const handleNameSave = (): void => {
 			if (editedName.trim() !== '') {
+				const updatedTask = { ...task, name: editedName };
+				workspaceService.updateIssue(updatedTask.id, convertTaskToIssue(updatedTask, user.id, projectId));
 				setTasks(tasks.map((t) => (t.id === task.id ? { ...t, name: editedName } : t)));
 			} else {
 				setEditedName(task.name);
@@ -917,15 +1110,22 @@ const TaskManagementUI = () => {
 									)}
 
 									<span
-										className={
-											task.completed ? 'line-through text-gray-500' : ''
-										}>
+										// className={
+										// 	task.completed ? 'line-through text-gray-500' : ''
+										// }
+									>
 										{task.name}
 									</span>
 
 								</div>
 								<div className="pl-2">
-									<IconButton onClick={() => { }} />
+									{/* <IconButton onClick={() => { }} /> */}
+									<IconButton onSaveDescription={(description: string) => {
+										console.log("Description từ component:", description);
+										
+										task.description = description;
+										workspaceService.updateIssue(task.id, convertTaskToIssue(task, user.id, projectId));	
+									}} taskDescription={task.description || ''}  />
 								</div>
 
 								<div className="ml-auto flex items-center">
@@ -965,7 +1165,7 @@ const TaskManagementUI = () => {
 								type="date"
 								className="border rounded-md p-1.5 pl-8 focus:ring-violet-500 focus:border-violet-500"
 								value={task.dueDate || ''}
-								onChange={(e) => updateDueDate(task.id, e.target.value)}
+								onChange={(e) => updateTaskDueDate(task.id, e.target.value)}
 							/>
 							<Calendar className="w-4 h-4 text-gray-400 absolute left-2" />
 						</div>
@@ -1121,18 +1321,19 @@ const TaskManagementUI = () => {
 			</>
 		);
 	};
+
 	const SubtaskRow: React.FC<{
-		parentTaskId: number;
+		parentTaskId: string;
 		subtask: Task;
-		updateSubtask: (parentId: number, subtaskId: number, updates: Partial<Task>) => void;
-		deleteSubtask: (parentId: number, subtaskId: number) => void;
+		updateSubtask: (parentId: string, subtaskId: string, updates: Partial<Task>) => void;
+		deleteSubtask: (parentId: string, subtaskId: string) => void;
 	}> = ({ parentTaskId, subtask, updateSubtask, deleteSubtask }) => {
 		const [isEditing, setIsEditing] = useState<boolean>(false);
 		const [editedName, setEditedName] = useState<string>(subtask.name);
 
 		const handleNameSave = (): void => {
 			if (editedName.trim() !== '') {
-				updateSubtask(parentTaskId, subtask.id, { name: editedName });
+				updateSubtask(parentTaskId, subtask.id!, { name: editedName });
 			} else {
 				setEditedName(subtask.name);
 			}
@@ -1266,6 +1467,7 @@ const TaskManagementUI = () => {
 			</tr>
 		);
 	};
+
 	const NewTaskRow: React.FC<NewTaskRowProps> = ({ status }) => {
 		const [localTaskName, setLocalTaskName] = useState<string>('');
 
@@ -1332,13 +1534,13 @@ const TaskManagementUI = () => {
 			e.preventDefault();
 			setIsOver(false);
 
-			const taskId = parseInt(e.dataTransfer.getData('taskId'));
+			const taskId = e.dataTransfer.getData('taskId');
 			const subtaskId = e.dataTransfer.getData('subtaskId');
 			const parentTaskId = e.dataTransfer.getData('parentTaskId');
 
 			if (subtaskId && parentTaskId) {
 				// Handle subtask drop
-				updateSubtask(parseInt(parentTaskId), parseInt(subtaskId), { status });
+				updateSubtask(parentTaskId, subtaskId, { status });
 				setDraggedTaskId(null);
 			} else if (taskId) {
 				// Handle main task drop

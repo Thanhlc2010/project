@@ -51,9 +51,9 @@ interface AvailableUsersResponse {
 	  page: number;
 	  limit: number;
 	}
-  }
+}
 
-  interface AddMembersToWorkspaceResponse {
+interface AddMembersToWorkspaceResponse {
 	id: string;
 	workspaceId: string;
 	userId: string;
@@ -63,10 +63,25 @@ interface AvailableUsersResponse {
 	user: User;
 }
 
+interface Comment {
+	commentId: string,
+	comment: string,
+}
+
 interface IssueResponse {
 	status: string;
 	data: Task | Task[];
-  }
+}
+
+interface CommentResponse {
+	status: string;
+	data: Comment | Comment[];
+}
+
+interface AddIssueResponse {
+	status: string;
+	data: Task;
+}
 
 export const workspaceService = {
 	//#region Workspace
@@ -91,6 +106,13 @@ export const workspaceService = {
 		return api.get<Workspace>(`/api/workspaces/${workspaceId}`);
 	},
 
+	async getMembersByWorkspaceId(workspaceId: string): Promise<{
+		status: string,
+		data: User[],
+	}>{
+		return api.get(`/api/workspaces/${workspaceId}/allMembers`);
+	},
+
 	async addMemberWorkspaceById(
 		workspaceId: string,
 		memberIds: string[]
@@ -99,15 +121,15 @@ export const workspaceService = {
 	},
 	
 
-	  async getAvailableUsers(
+	async getAvailableUsers(
 		workspaceId: string,
 		page: number = 1,
 		limit: number = 10
-	  ): Promise<AvailableUsersResponse> {
+	): Promise<AvailableUsersResponse> {
 		return api.get<AvailableUsersResponse>(
-		  `/api/workspaces/${workspaceId}/available-users?page=${page}&limit=${limit}`
+			`/api/workspaces/${workspaceId}/available-users?page=${page}&limit=${limit}`
 		);
-	  },
+	},
 
 	// Update a workspace
 	async updateWorkspace(workspaceId: string, data: UpdateWorkspaceParams): Promise<Workspace> {
@@ -121,6 +143,14 @@ export const workspaceService = {
 	//#endregion
 
 	//#region Project
+
+	// Get project by id 
+	async getProjectById(projectId: string): Promise<{
+		status: string;
+		data: Project;
+	}> {
+		return api.get(`/api/projects/${projectId}/get`);
+	},
 	// Create new project
 	async createProject(data: CreateProjectParams): Promise<{
 		status: string;
@@ -150,6 +180,22 @@ export const workspaceService = {
 	// Retrieve project by id
 	async retrieveProjectById(projectId: string): Promise<Project> {
 		return api.get<Project>(`/api/projects/${projectId}`);
+	},
+
+	// Check user in project
+	async checkExistMemberInProject(projectId: string, memberId: string): Promise<{
+		status: string;
+		data: User;
+	}> {
+		return api.post(`/api/projects/checkMemberExist/${projectId}`, {memberId: memberId});
+	},
+
+	// Add member to project
+	async addMemberToProject(projectId: string, memberId: string): Promise<{
+		status: string;
+		data: User;
+	}> {
+		return api.post(`/api/projects/${projectId}/members`, {userId: memberId});
 	},
 
 	// Create new pert
@@ -183,10 +229,12 @@ export const workspaceService = {
 		assigneeId?: string;
 		status?: string;
 		priority?: string;
+		parentId?: string;
 	}): Promise<IssueResponse> {
 		const params = new URLSearchParams();
 		if (filters?.projectId) params.append('projectId', filters.projectId);
 		if (filters?.assigneeId) params.append('assigneeId', filters.assigneeId);
+		if (filters?.parentId) params.append('parentId', filters.parentId);
 
 		const query = params.toString();
 		const url = query ? `/api/issues?${query}` : `/api/issues`;
@@ -196,18 +244,14 @@ export const workspaceService = {
 	},
 
 	// ✅ GET issue by ID
-	async getIssueById(id: string): Promise<IssueResponse> {
-		const response = await api.get<IssueResponse>(`/api/issues/${id}`);
+	async getIssueById(id: string): Promise<Comment> {
+		const response = await api.get<Comment>(`/api/issues/${id}`);
 		return response;
 	},
 
 	// ✅ POST: Create new issue
-	async createIssue(userId: string, data: Partial<Task>): Promise<IssueResponse> {
-		console.log("Da goi");
-		
-		console.log("DATA", data);
-		
-		const response = await api.post<IssueResponse>('/api/issues', data);
+	async createIssue(data: Partial<Task>): Promise<AddIssueResponse> {		
+		const response = await api.post<AddIssueResponse>('/api/issues', data);
 		return response;
 	},
 
@@ -223,6 +267,23 @@ export const workspaceService = {
 		return response;
 	},
 
+	async getComments(filters?: {
+		commentId?: string;
+		issueId?: string;
+		userId?: string;
+	}): Promise<CommentResponse> {
+		const params = new URLSearchParams();
+		if (filters?.commentId) params.append('commentId', filters.commentId);
+		if (filters?.issueId) params.append('issueId', filters.issueId);
+		if (filters?.userId) params.append('userId', filters.userId);
+
+
+		const query = params.toString();
+		const url = query ? `/api/issues/comments/?${query}` : `/api/issues/comments`;
+
+		const response = await api.get<CommentResponse>(`/api/issues/${filters?.issueId}/comments`);
+		return response;
+	},
 	// ✅ POST: Add comment to issue
 	async addComment(issueId: string, content: string): Promise<IssueResponse> {
 		const response = await api.post<IssueResponse>(`/api/issues/${issueId}/comments`, { content });

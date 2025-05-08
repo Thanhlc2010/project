@@ -204,6 +204,21 @@ router.delete('/:id', protect, async (req, res, next) => {
   }
 });
 
+router.get('/:id/allMembers', protect, async (req, res, next) => {
+  try {
+    const members = await workspaceService.getMembersByWorkspaceId(
+      req.params.id,
+      req.user.id,
+    );
+    res.status(200).json({
+      status: 'success',
+      data: members
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 /**
  * @swagger
  * /api/workspaces/{id}/members:

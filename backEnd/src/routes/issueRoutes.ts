@@ -105,6 +105,7 @@ router.post('/', protect, async (req, res, next) => {
  *           type: string
  *           enum: [LOWEST, LOW, MEDIUM, HIGH, HIGHEST]
  *         description: Filter issues by priority
+ *      
  *     responses:
  *       200:
  *         description: List of issues
@@ -121,7 +122,8 @@ router.get('/', protect, async (req, res, next) => {
       projectId: req.query.projectId as string,
       assigneeId: req.query.assigneeId as string,
       status: req.query.status as IssueStatus,
-      priority: req.query.priority as Priority
+      priority: req.query.priority as Priority,
+      parentId: req.query.parentId as string,
     });
     res.status(200).json({
       status: 'success',
@@ -274,6 +276,23 @@ router.post('/:id/comments', protect, async (req, res, next) => {
     res.status(201).json({
       status: 'success',
       data: comment
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/:issueId/comments', protect, async (req, res, next) => {
+  try {
+    // console.log("URL : ", req.params);    
+    const comments = await issueService.getComments(req.user.id, {
+      // userId: req.query.userId as string,
+      issueId: req.params.issueId,
+      // commentId: req.query.commentId as string,
+    })
+    res.status(200).json({
+      status: 'success',
+      data: comments
     });
   } catch (error) {
     next(error);

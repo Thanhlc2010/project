@@ -122,8 +122,8 @@ router.get('/', protect, async (req, res, next) => {
  *       404:
  *         description: Project not found
  */
-router.get('/:id', protect, async (req, res, next) => {
-  try {
+router.get('/:id/get', protect, async (req, res, next) => {
+  try {    
     const project = await projectService.getProjectById(req.params.id, req.user.id);
     res.status(200).json({
       status: 'success',
@@ -216,6 +216,18 @@ router.delete('/:id', protect, async (req, res, next) => {
     res.status(200).json({
       status: 'success',
       message: 'Project deleted successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/checkMemberExist/:id', protect, async (req, res, next) => {
+  try {
+    const isExist = await projectService.checkExistMemberInProject(req.params.id, req.user.id, req.body.memberId);
+    res.status(200).json({
+      status: 'success',
+      data: isExist,
     });
   } catch (error) {
     next(error);

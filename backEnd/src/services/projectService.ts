@@ -40,7 +40,7 @@ export const projectService = {
     //   throw AppError.badRequest('Project key already exists');
     // }
 
-    return prisma.project.create({
+    const project = await prisma.project.create({
       data: {
         name: data.name,
         key: 'PRJ-' + uuidv4().slice(0, 7),
@@ -65,6 +65,10 @@ export const projectService = {
         },
       },
     });
+
+    this.addMember(project.id, userId, userId);
+
+    return project;
   },
 
   async getProjects(userId: string, workspaceId?: string) {
@@ -241,6 +245,40 @@ export const projectService = {
     });
   },
 
+  async checkExistMemberInProject(projectId: string, userId: string, memberId: string): Promise<boolean> {
+    const project = await prisma.project.findFirst({
+      where: {
+        id: projectId,
+        OR: [
+          { ownerId: userId },
+          {
+            workspace: {
+              ownerId: userId,
+            },
+          },
+        ],
+      },
+    });
+
+    if (!project) {
+      throw AppError.notFound('Project not found or unauthorized');
+    }
+    const member = await prisma.projectMember.findUnique({
+      where: {
+        projectId_userId: {
+          projectId: projectId,
+          userId: memberId,
+        },
+      },
+      select: {
+        status: true,
+      },
+    });
+  
+    return member?.status === Status.ACTIVE;
+  },
+  
+
   async addMember(projectId: string, userId: string, memberId: string) {
     const project = await prisma.project.findFirst({
       where: {
@@ -272,6 +310,7 @@ export const projectService = {
     if (existingMember) {
       if (existingMember.status === Status.ACTIVE) {
         throw AppError.badRequest('User is already a member');
+        // return res.status(400).json({status: 'User is already a member', message: 'User is already a member'});
       }
 
       // Reactivate inactive member
@@ -314,6 +353,7 @@ export const projectService = {
       },
     });
   },
+
   async removeMembers(projectId: string, userId: string, memberIds: string[]) {
     const project = await prisma.project.findFirst({
       where: {
