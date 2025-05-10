@@ -137,7 +137,7 @@ function SpaceTree({ item, isPert = false }: SpaceTreeProps) {
 									<DropdownMenuItem asChild onClick={handleCreatePertClick}>
 										<div className="flex gap-2">
 											<Plus className="h-4 w-4" />
-											Add PERT Task
+											Add PERT Diagram
 										</div>
 									</DropdownMenuItem>
 									<DropdownMenuItem asChild onClick={handleClickDelete}>
@@ -176,7 +176,7 @@ function SpaceTree({ item, isPert = false }: SpaceTreeProps) {
 	return (
 		<SidebarMenuButton isActive={isActive} onClick={goToPert(item.id)}>
 			<span className="text-ellipsis overflow-hidden whitespace-nowrap">
-				{(item as Pert).id || 'Name'}
+				{(item as Pert).name || 'Name'}
 			</span>
 		</SidebarMenuButton>
 	);

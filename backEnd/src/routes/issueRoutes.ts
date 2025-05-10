@@ -53,10 +53,7 @@ const router = express.Router();
  *         description: Invalid input
  */
 router.post('/', protect, async (req, res, next) => {
-  try {
-    console.log("Create Task : ...")
-    console.log(req.body);
-    
+  try {    
     const issue = await issueService.createIssue(req.user.id, {
       title: req.body.title,
       description: req.body.description,
@@ -287,8 +284,6 @@ router.post('/:id/comments', protect, async (req, res, next) => {
 
 router.get('/:issueId/comments', protect, async (req, res, next) => {
   try {
-    console.log("URL : ", req.params);
-    
     const comments = await issueService.getComments(req.user.id, {
       // userId: req.query.userId as string,
       issueId: req.params.issueId,

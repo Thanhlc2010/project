@@ -115,7 +115,7 @@ export const workspaceService = {
 		return api.get(`/api/workspaces/${workspaceId}/allMembers`);
 	},
 
-	async addMemberWorkspaceById(
+	async addMemberWorkspaceByIds(
 		workspaceId: string,
 		memberIds: string[]
 	): Promise<{ status: string; data: AddMembersToWorkspaceResponse[] }> {

@@ -92,8 +92,6 @@ export const issueService = {
 
   async createIssue(userId: string, data: CreateIssueData) {
     // Check if user has access to project
-    console.log("Create issue", data);
-    
     const project = await prisma.project.findFirst({
       where: {
         id: data.projectId,
@@ -116,8 +114,6 @@ export const issueService = {
     }
 
     // If parent issue is specified, verify it exists in the same project
-    console.log("Parent ID : " + data.parentId);
-    
     if (data.parentId) {
       const parentIssue = await prisma.issue.findFirst({
         where: {
@@ -325,8 +321,8 @@ export const issueService = {
   },
 
   async updateIssue(issueId: string, userId: string, data: UpdateIssueData) {
-    console.log("issue Id : " + issueId);
-    console.log("Update issue", data);
+    // console.log("issue Id : " + issueId);
+    // console.log("Update issue", data);
     
     const issue = await prisma.issue.findFirst({
       where: {

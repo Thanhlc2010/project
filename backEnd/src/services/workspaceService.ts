@@ -4,7 +4,7 @@ import { Status, Workspace } from '@prisma/client';
 
 export const workspaceService = {
   async createWorkspace(userId: string, data: { name: string }) {
-    return prisma.workspace.create({
+    const workspace = await prisma.workspace.create({
       data: {
         name: data.name,
         ownerId: userId,
@@ -20,6 +20,12 @@ export const workspaceService = {
         },
       },
     });
+
+    console.log("Create workspce", workspace);
+    
+    await this.addMember(workspace.id, userId, userId);
+
+    return workspace;
   },
 
   async getWorkspaces(userId: string) {
@@ -205,6 +211,47 @@ export const workspaceService = {
     });
   },
 
+  async getMembersByWorkspaceId(workspaceId: string, userId: string) {
+    // console.log("Get members of " + workspaceId + " ," + userId);
+    
+    const workspace = await prisma.workspace.findFirst({
+      where: {
+        id: workspaceId,
+        OR: [
+          { ownerId: userId },
+          {
+            members: {
+              some: {
+                userId: userId,
+                status: Status.ACTIVE,
+              },
+            },
+          },
+        ],
+      },
+    });
+  
+    if (!workspace) {
+      throw AppError.notFound('Workspace not found or unauthorized');
+    }
+  
+    return prisma.workspaceMember.findMany({
+      where: {
+        workspaceId,
+        status: Status.ACTIVE,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+  },
+  
   async addMember(workspaceId: string, userId: string, memberId: string) {
     const workspace = await prisma.workspace.findFirst({
       where: {
