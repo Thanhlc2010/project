@@ -55,7 +55,7 @@ interface AvailableUsersResponse {
 	}
 }
 
-interface AddMembersToWorkspaceResponse {
+interface AddMembersToWorkspaceResponseData {
 	id: string;
 	workspaceId: string;
 	userId: string;
@@ -115,21 +115,33 @@ export const workspaceService = {
 		return api.get(`/api/workspaces/${workspaceId}/allMembers`);
 	},
 
-	async addMemberWorkspaceByIds(
+	async removeMembers(
 		workspaceId: string,
-		memberIds: string[]
-	): Promise<{ status: string; data: AddMembersToWorkspaceResponse[] }> {
+		memberIds: string[],
+	): Promise<{
+		status: string;
+		data: {
+			id: string;
+			user: User;
+		}[];
+	}> {
+		return api.post(`/api/workspaces/${workspaceId}/members/remove`, { memberIds });
+	},
+
+async addMemberWorkspaceByIds(
+		workspaceId: string,
+		memberIds: string[],
+	): Promise<{ status: string; data: AddMembersToWorkspaceResponseData[] }> {
 		return api.post(`/api/workspaces/${workspaceId}/members`, { memberIds });
 	},
-	
 
 	async getAvailableUsers(
 		workspaceId: string,
 		page: number = 1,
-		limit: number = 10
+		limit: number = 10,
 	): Promise<AvailableUsersResponse> {
 		return api.get<AvailableUsersResponse>(
-			`/api/workspaces/${workspaceId}/available-users?page=${page}&limit=${limit}`
+			`/api/workspaces/${workspaceId}/available-users?page=${page}&limit=${limit}`,
 		);
 	},
 
