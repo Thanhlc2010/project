@@ -271,4 +271,157 @@ export const workspaceService = {
       },
     });
   },
+  async addMembers(workspaceId: string, userId: string, memberIds: string[]) {
+    const workspace = await prisma.workspace.findFirst({
+      where: {
+        id: workspaceId,
+        ownerId: userId,
+      },
+    });
+
+    if (!workspace) {
+      throw AppError.notFound('Workspace not found or unauthorized');
+    }
+
+    // Get existing members to handle reactivation
+    const existingMembers = await prisma.workspaceMember.findMany({
+      where: {
+        workspaceId,
+        userId: {
+          in: memberIds,
+        },
+      },
+    });
+
+    const existingMemberIds = new Set(existingMembers.map(member => member.userId));
+    const activeMembers = new Set(
+      existingMembers
+        .filter(member => member.status === Status.ACTIVE)
+        .map(member => member.userId)
+    );
+
+    // Check for already active members
+    const alreadyActiveMembers = memberIds.filter(id => activeMembers.has(id));
+    if (alreadyActiveMembers.length > 0) {
+      throw AppError.badRequest(
+        `Users with IDs ${alreadyActiveMembers.join(', ')} are already active members`
+      );
+    }
+
+    // Separate members into reactivate and create new
+    const membersToReactivate = memberIds.filter(id => existingMemberIds.has(id));
+    const membersToCreate = memberIds.filter(id => !existingMemberIds.has(id));
+
+    // Perform all operations in a transaction
+    return prisma.$transaction(async tx => {
+      // Reactivate existing inactive members
+      if (membersToReactivate.length > 0) {
+        await tx.workspaceMember.updateMany({
+          where: {
+            workspaceId,
+            userId: {
+              in: membersToReactivate,
+            },
+          },
+          data: {
+            status: Status.ACTIVE,
+          },
+        });
+      }
+
+      // Create new members
+      if (membersToCreate.length > 0) {
+        await tx.workspaceMember.createMany({
+          data: membersToCreate.map(memberId => ({
+            workspaceId,
+            userId: memberId,
+            status: Status.ACTIVE,
+          })),
+        });
+      }
+
+      // Return updated members list
+      return tx.workspaceMember.findMany({
+        where: {
+          workspaceId,
+          userId: {
+            in: memberIds,
+          },
+          status: Status.ACTIVE,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      });
+    });
+  },
+  async removeMembers(workspaceId: string, userId: string, memberIds: string[]) {
+    const workspace = await prisma.workspace.findFirst({
+      where: {
+        id: workspaceId,
+        ownerId: userId,
+      },
+    });
+
+    if (!workspace) {
+      throw AppError.notFound('Workspace not found or unauthorized');
+    }
+
+    // Get existing active members
+    const existingMembers = await prisma.workspaceMember.findMany({
+      where: {
+        workspaceId,
+        userId: {
+          in: memberIds,
+        },
+        status: Status.ACTIVE,
+      },
+    });
+
+    if (existingMembers.length === 0) {
+      throw AppError.notFound('No active members found');
+    }
+
+    // Perform the update in a transaction
+    return prisma.$transaction(async tx => {
+      // Deactivate all specified members
+      await tx.workspaceMember.updateMany({
+        where: {
+          workspaceId,
+          userId: {
+            in: memberIds,
+          },
+          status: Status.ACTIVE,
+        },
+        data: {
+          status: Status.INACTIVE,
+        },
+      });
+
+      // Return updated members list
+      return tx.workspaceMember.findMany({
+        where: {
+          workspaceId,
+          userId: {
+            in: memberIds,
+          },
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      });
+    });
+  },
 };

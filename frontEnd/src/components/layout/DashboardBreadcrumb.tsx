@@ -14,22 +14,47 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { useWorkspaceStore } from '@/store/workspaceStore';
+import { cn } from '@/lib/utils';
+import { Path, useWorkspaceStore } from '@/store/workspaceStore';
 
 export function DashboardBreadcrumb() {
 	const params = useParams();
+	const [paths, setPaths] = useState<Path[]>([]);
+	const workspaces = useWorkspaceStore((state) => state.workspaces);
+	const pertByProjectId = useWorkspaceStore((state) => state.getPertByProjectId);
 	const findPathToItem = useWorkspaceStore((state) => state.findPathToItem);
+	const projectPertMap = useWorkspaceStore((state) => state.projectPertMap);
+
 	const itemType = params.itemType as string;
 	const itemId = params.itemId as string;
-	const pertId = params.pertId as string; // Thêm pertId từ params
+
+	const isPert = itemType === 'p';
+
+	useEffect(() => {
+		if (isPert) {
+			const instance = Object.entries(projectPertMap).find(([_, pertList]) => {
+				return pertList.findIndex((pert) => pert.id === itemId) !== -1;
+			});
+
+			if (instance) {
+				setPaths(
+					[...(findPathToItem(instance[0]) ?? [])].concat({
+						id: itemId,
+						name: `PERT ${itemId}`,
+						type: 'p',
+					}),
+				);
+			}
+		} else {
+			setPaths(findPathToItem(itemId) ?? []);
+		}
+	}, [isPert, itemId, projectPertMap, findPathToItem, workspaces, pertByProjectId]);
 
 	if (!itemType || !itemId) {
 		return null;
 	}
 
-	const path = findPathToItem(itemId);
-
-	if (path) {
+	if (paths) {
 		return (
 			<>
 				<Breadcrumb>
@@ -38,17 +63,22 @@ export function DashboardBreadcrumb() {
 							<BreadcrumbLink href={APP_ROUTES.DASHBOARD}>Dashboard</BreadcrumbLink>
 						</BreadcrumbItem>
 						<BreadcrumbSeparator />
-						{path.map((item, index) => (
-							<React.Fragment key={`item_${item.type}-${item.id}-${index}`}>
-								<BreadcrumbItem>
-									<BreadcrumbLink
-										href={`${APP_ROUTES.DASHBOARD}/${item.type}/${item.id}`}>
-										{item.name}
-									</BreadcrumbLink>
-								</BreadcrumbItem>
-								{index < path.length - 1 && <BreadcrumbSeparator />}
-							</React.Fragment>
-						))}
+						{paths.map((item, index) => {
+							const isActive = itemId === item.id;
+
+							return (
+								<React.Fragment key={`item_${item.type}-${item.id}-${index}`}>
+									<BreadcrumbItem>
+										<BreadcrumbLink
+											href={`${APP_ROUTES.DASHBOARD}/${item.type}/${item.id}`}
+											className={cn(isActive && 'text-primary font-bold')}>
+											{item.name}
+										</BreadcrumbLink>
+									</BreadcrumbItem>
+									{index < paths.length - 1 && <BreadcrumbSeparator />}
+								</React.Fragment>
+							);
+						})}
 					</BreadcrumbList>
 				</Breadcrumb>
 			</>

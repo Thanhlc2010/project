@@ -1,6 +1,9 @@
 'use client';
 
+import { useEffect } from 'react';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useWorkspaceStore } from '@/store/workspaceStore';
 
 export default function DashboardPage() {
 	return (

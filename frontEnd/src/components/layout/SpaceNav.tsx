@@ -14,7 +14,7 @@ import {
 import { SidebarMenuButton, SidebarMenuItem, SidebarMenuSub } from '../ui/sidebar';
 import SpaceTree from './SpaceTree';
 import { Workspace } from '@/common/types';
-import { useActiveItem } from '@/hooks/useActiveItem';
+import { useActiveItemStore } from '@/store/activeItemStore';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 
 /**
@@ -38,14 +38,17 @@ type SpaceNavProps = {
 
 const SpacesNav = ({ workspace }: SpaceNavProps) => {
 	const router = useRouter();
-	const { isActive: isSpaceActive, shouldExpandItem: shouldExpandSpace } = useActiveItem(
-		workspace.id,
-	);
 	const addProject = useWorkspaceStore((state) => state.addProject);
 	const deleteWorkspace = useWorkspaceStore((state) => state.deleteWorkspace);
 	const [isSpaceExpanding, setIsSpaceExpanding] = useState(false);
 	const [isCreateListDialogOpen, setIsCreateListDialogOpen] = useState(false);
 	const [isDeleteSpaceDialogOpen, setIsDeleteSpaceDialogOpen] = useState(false);
+	const activeIds = useActiveItemStore((state) => state.activeIds);
+
+	const itemIndex = activeIds.findIndex((id) => id === workspace.id);
+	const isSpaceActive = itemIndex > -1 && itemIndex === activeIds.length - 1;
+	const shouldExpandSpace = itemIndex > -1 && itemIndex < activeIds.length - 1;
+
 	const goToSpace = () => {
 		router.push(`/dashboard/s/${workspace.id}`);
 	};

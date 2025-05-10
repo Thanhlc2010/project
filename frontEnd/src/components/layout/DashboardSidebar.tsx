@@ -1,6 +1,7 @@
 'use client';
 
 import { Home, Plus } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -12,7 +13,6 @@ import { APP_ROUTES } from '@/common/constants';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
-	Sidebar,
 	SidebarContent,
 	SidebarFooter,
 	SidebarGroup,
@@ -28,10 +28,15 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 
+const Sidebar = dynamic(() => import('@/components/ui/sidebar').then((mod) => mod.Sidebar), {
+	ssr: false,
+});
+
 export function AppSidebar() {
 	const pathname = usePathname();
 	const router = useRouter();
 	const [isCreateSpaceDialogOpen, setIsCreateSpaceDialogOpen] = useState(false);
+	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 	const addWorkspace = useWorkspaceStore((state) => state.addWorkspace);
 	const workspaces = useWorkspaceStore((state) => state.workspaces);
 	const getAllWorkspaces = useWorkspaceStore((state) => state.getAllWorkspaces);
@@ -123,9 +128,7 @@ export function AppSidebar() {
 					</SidebarGroup>
 				</SidebarContent>
 				<SidebarRail />
-				<SidebarFooter>
-					<NavUser user={user!} />
-				</SidebarFooter>
+				<SidebarFooter>{isAuthenticated && user && <NavUser user={user} />}</SidebarFooter>
 			</Sidebar>
 
 			<CreateSpaceDialog

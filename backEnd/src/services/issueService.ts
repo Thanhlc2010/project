@@ -22,8 +22,78 @@ interface UpdateIssueData {
 }
 
 export const issueService = {
+  async getIssuesByWorkspace(userId: string, workspaceId: string, filters: {
+    projectStatus?: Status;
+    issueStatus?: IssueStatus;
+    priority?: Priority;
+  }) {
+    return prisma.issue.findMany({
+      where: {
+        project: {
+          workspaceId,
+          status: filters.projectStatus,
+          OR: [
+            { ownerId: userId },
+            {
+              members: {
+                some: {
+                  userId: userId,
+                  status: Status.ACTIVE
+                }
+              }
+            }
+          ]
+        },
+        ...(filters.issueStatus && { issueStatus: filters.issueStatus }),
+        ...(filters.priority && { priority: filters.priority })
+      },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        assignee: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        project: {
+          select: {
+            id: true,
+            name: true,
+            key: true,
+            status: true
+          }
+        },
+        labels: {
+          include: {
+            label: true
+          }
+        },
+        _count: {
+          select: {
+            comments: true,
+            subIssues: true,
+            attachments: true
+          }
+        }
+      },
+      orderBy: [
+        { priority: 'desc' },
+        { createdAt: 'desc' }
+      ]
+    });
+  },
+
   async createIssue(userId: string, data: CreateIssueData) {
     // Check if user has access to project
+    console.log("Create issue", data);
+    
     const project = await prisma.project.findFirst({
       where: {
         id: data.projectId,
@@ -71,9 +141,9 @@ export const issueService = {
         }
       });
 
-      if (!projectMember) {
-        throw AppError.badRequest('Assignee must be a project member');
-      }
+      // if (!projectMember) {
+      //   throw AppError.badRequest('Assignee must be a project member');
+      // }
     }
 
     return prisma.issue.create({
@@ -125,8 +195,9 @@ export const issueService = {
     assigneeId?: string;
     status?: IssueStatus;
     priority?: Priority;
+    parentId?: string; // thêm
   }) {
-    const whereClause = {
+    const whereClause: any = {
       OR: [
         {
           project: {
@@ -147,50 +218,26 @@ export const issueService = {
       ...(filters.projectId && { projectId: filters.projectId }),
       ...(filters.assigneeId && { assigneeId: filters.assigneeId }),
       ...(filters.status && { issueStatus: filters.status }),
-      ...(filters.priority && { priority: filters.priority })
+      ...(filters.priority && { priority: filters.priority }),
+      ...(filters.parentId !== undefined && { parentId: filters.parentId }) // thêm parentId vào
     };
 
     return prisma.issue.findMany({
       where: whereClause,
       include: {
         creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         },
         assignee: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         },
         project: {
-          select: {
-            id: true,
-            name: true,
-            key: true
-          }
+          select: { id: true, name: true, key: true }
         },
-        labels: {
-          include: {
-            label: true
-          }
-        },
-        _count: {
-          select: {
-            comments: true,
-            subIssues: true,
-            attachments: true
-          }
-        }
+        labels: { include: { label: true } },
+        _count: { select: { comments: true, subIssues: true, attachments: true } }
       },
-      orderBy: [
-        { priority: 'desc' },
-        { createdAt: 'desc' }
-      ]
+      orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }]
     });
   },
 
@@ -278,6 +325,9 @@ export const issueService = {
   },
 
   async updateIssue(issueId: string, userId: string, data: UpdateIssueData) {
+    console.log("issue Id : " + issueId);
+    console.log("Update issue", data);
+    
     const issue = await prisma.issue.findFirst({
       where: {
         id: issueId,
@@ -299,11 +349,11 @@ export const issueService = {
         project: true
       }
     });
-
+  
     if (!issue) {
       throw AppError.notFound('Issue not found or unauthorized');
     }
-
+  
     // If changing assignee, verify they are a project member
     if (data.assigneeId) {
       const projectMember = await prisma.projectMember.findFirst({
@@ -313,18 +363,17 @@ export const issueService = {
           status: Status.ACTIVE
         }
       });
-
-      if (!projectMember) {
-        throw AppError.badRequest('Assignee must be a project member');
-      }
+  
+      // if (!projectMember) {
+      //   throw AppError.badRequest('Assignee must be a project member');
+      // }
     }
-
+  
     // Create history record for changes
-    const changes: any[] = [];
+    const rawChanges: any[] = [];
     Object.entries(data).forEach(([key, value]) => {
       if (value !== undefined && issue[key as keyof typeof issue] !== value) {
-        changes.push({
-          issueId,
+        rawChanges.push({
           field: key,
           oldValue: String(issue[key as keyof typeof issue]),
           newValue: String(value),
@@ -332,8 +381,8 @@ export const issueService = {
         });
       }
     });
-
-    // Update issue and create history records in a transaction
+  
+    // ✅ Remove `issueId` because Prisma will infer it from context
     return prisma.$transaction(async (prisma) => {
       const updatedIssue = await prisma.issue.update({
         where: { id: issueId },
@@ -341,7 +390,7 @@ export const issueService = {
           ...data,
           history: {
             createMany: {
-              data: changes
+              data: rawChanges
             }
           }
         },
@@ -369,10 +418,11 @@ export const issueService = {
           }
         }
       });
-
+  
       return updatedIssue;
     });
   },
+  
 
   async addComment(issueId: string, userId: string, content: string) {
     const issue = await prisma.issue.findFirst({
@@ -413,6 +463,27 @@ export const issueService = {
           }
         }
       }
+    });
+  },
+  
+  async getComments(userId: string, { userId: filterUserId, issueId, commentId }: {
+    userId?: string;
+    issueId?: string;
+    commentId?: string;
+  }) {
+    const whereClause: any = {
+      ...(filterUserId && { userId: filterUserId }),
+      ...(issueId && { issueId }),
+      ...(commentId && { id: commentId }),
+    };
+  
+    return prisma.comment.findMany({
+      where: whereClause,
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        issue: { select: { id: true, title: true } },
+      },
+      orderBy: { createdAt: 'desc' },
     });
   },
 

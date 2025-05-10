@@ -241,4 +241,95 @@ router.delete('/profile', protect, async (req, res, next) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/users:
+ *   get:
+ *     summary: Get all users with pagination
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of items per page
+ *       - in: query
+ *         name: excludeIds
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: string
+ *             format: uuid
+ *         style: form
+ *         explode: false
+ *         description: Optional array of user IDs to exclude from results
+ *     responses:
+ *       200:
+ *         description: List of users with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     users:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                           email:
+ *                             type: string
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         total:
+ *                           type: integer
+ *                         page:
+ *                           type: integer
+ *                         pages:
+ *                           type: integer
+ *                         limit:
+ *                           type: integer
+ */
+router.get('/', protect, async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    
+    // Handle excludeIds if provided in query
+    let excludeUserIds: string[] = [];
+    if (req.query.excludeIds) {
+      excludeUserIds = (req.query.excludeIds as string).split(',');
+    }
+    
+    const result = await UserService.getAllUsersWithPagination(page, limit, excludeUserIds);
+    res.status(200).json({
+      status: 'success',
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
